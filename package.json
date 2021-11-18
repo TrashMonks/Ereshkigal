@@ -1,0 +1,13 @@
+{
+  "name": "jsbottest",
+  "version": "0.0.0",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "discord.js": "^13.3.1"
+  },
+  "description": "This is a Discord bot with plugin architecture inspired by [LHBot](https://github.com/mindset-tk/LHBot). It's designed specifically to help with administrative tasks for the *Caves of Qud* Discord.",
+  "devDependencies": {},
+  "author": "helado de brownie",
+  "license": "MIT"
+}
