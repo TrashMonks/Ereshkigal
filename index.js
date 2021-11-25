@@ -49,14 +49,17 @@ trace has been printed to the attached terminal for a maintainer to see.'
 
 const onMessageCreate = async (message) => {
     // Ignore all messages that don't begin with the command prefix.
-    if (!message.content.startsWith(bot.config.commandPrefix)) {
+    if (
+        message.content === null ||
+        !message.content.startsWith(bot.config.commandPrefix)
+    ) {
         return
     }
 
     bot.logDiscordMessage(message)
 
     // All commands only work for staff.
-    if (!message.member.roles.cache.has(bot.config.staffRole)) {
+    if (!(message.member?.roles.cache.has(bot.config.staffRole) ?? false)) {
         return
     }
 
