@@ -48,8 +48,11 @@ trace has been printed to the attached terminal for a maintainer to see.'
 }
 
 const onMessageCreate = async (message) => {
-    // Ignore all messages that don't begin with the command prefix.
+    // Ignore all messages that:
+    // - are from the bot itself, since this would be susceptible to exploits;
+    // - don't begin with the command prefix.
     if (
+        message.author.id === bot.client.user.id ||
         message.content === null ||
         !message.content.startsWith(bot.config.commandPrefix)
     ) {
@@ -157,7 +160,7 @@ commands.'
 
     bot.info('Connecting...')
     const intents = Array.from(intentsSet)
-    const client = new Client({intents})
+    const client = bot.client = new Client({intents})
     client.login(config.token)
 
     // Wait until the connection is established.
