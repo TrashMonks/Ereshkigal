@@ -130,10 +130,15 @@ commands.'
     }
 
     // Load all plugins.
-    // Loading a plugin consists of requiring it as a module and then querying
-    // the intents it needs. (GUILDS and GUILD_MESSAGES intents are assumed.)
+    // Loading a plugin consists of:
+    // - requiring it as a module;
+    // - querying the intents it needs (GUILDS and GUILD_MESSAGES intents are
+    //   assumed);
+    // - running its initialize function if it has one.
+    // All of this happens before connection so that any plugin can abort at
+    // any point if its needs aren't met.
 
-    bot.info('Loading plugins...')
+    console.group('Loading plugins...')
     const pluginFileNames = await readdir(pluginDirectoryName)
     const intentsSet = new Set(['GUILDS', 'GUILD_MESSAGES'])
     const plugins = bot.plugins = []
@@ -148,7 +153,16 @@ commands.'
                 intentsSet.add(intent)
             }
         }
+
+        if (plugin.initialize !== undefined) {
+            console.group(plugin.fileName)
+            await plugin.initialize(bot)
+            console.groupEnd()
+        }
     }
+
+    console.groupEnd()
+    await bot.saveConfig()
 
     // Sort plugins lexicographically by name.
     plugins.sort((pluginA, pluginB) =>
@@ -157,28 +171,10 @@ commands.'
                                        0)
 
     // Connect to Discord.
-
     bot.info('Connecting...')
     const intents = Array.from(intentsSet)
     const client = bot.client = new Client({intents})
     client.login(config.token)
-
-    // Wait until the connection is established.
-    client.on('ready', async () => {
-        // Call any per-plugin post-login logic.
-
-        bot.info('Initializing plugins...')
-
-        for (const plugin of plugins) {
-            if (plugin.initialize !== undefined) {
-                console.group(plugin.fileName)
-                await plugin.initialize(bot)
-                console.groupEnd()
-            }
-        }
-
-        client.on('messageCreate', onMessageCreate)
-        await bot.saveConfig()
-        bot.info('Done.')
-    })
+    client.on('ready', () => bot.info('Done.'))
+    client.on('messageCreate', onMessageCreate)
 })()
