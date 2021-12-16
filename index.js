@@ -49,10 +49,10 @@ trace has been printed to the attached terminal for a maintainer to see.'
 
 const onMessageCreate = async (message) => {
     // Ignore all messages that:
-    // - are from the bot itself, since this would be susceptible to exploits;
+    // - are from any bot, since this would be susceptible to exploits;
     // - don't begin with the command prefix.
     if (
-        message.author.id === bot.client.user.id ||
+        message.author.bot ||
         message.content === null ||
         !message.content.startsWith(bot.config.commandPrefix)
     ) {
