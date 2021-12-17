@@ -154,6 +154,7 @@ commands.'
     const plugins = bot.plugins = []
 
     for (const pluginFileName of pluginFileNames) {
+        console.group(pluginFileName)
         const plugin = require(`${pluginDirectoryName}/${pluginFileName}`)
         plugin.fileName = pluginFileName
         plugins.push(plugin)
@@ -165,10 +166,10 @@ commands.'
         }
 
         if (plugin.initialize !== undefined) {
-            console.group(plugin.fileName)
             await plugin.initialize(bot)
-            console.groupEnd()
         }
+
+        console.groupEnd()
     }
 
     console.groupEnd()
