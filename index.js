@@ -47,6 +47,16 @@ trace has been printed to the attached terminal for a maintainer to see.'
         `Usage: ${bot.config.commandPrefix}${plugin.usage}`,
 }
 
+const onReady = async () => {
+    for (const plugin of bot.plugins) {
+        if (plugin.ready !== undefined) {
+            await plugin.ready(bot)
+        }
+    }
+
+    bot.info('Done.')
+}
+
 const onMessageCreate = async (message) => {
     // Ignore all messages that:
     // - are from any bot, since this would be susceptible to exploits;
@@ -174,7 +184,8 @@ commands.'
     bot.info('Connecting...')
     const intents = Array.from(intentsSet)
     const client = bot.client = new Client({intents, failIfNotExists: false})
+    bot.client = client
     client.login(config.token)
-    client.on('ready', () => bot.info('Done.'))
+    client.on('ready', onReady)
     client.on('messageCreate', onMessageCreate)
 })()
