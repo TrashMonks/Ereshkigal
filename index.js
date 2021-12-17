@@ -173,7 +173,7 @@ commands.'
     // Connect to Discord.
     bot.info('Connecting...')
     const intents = Array.from(intentsSet)
-    const client = bot.client = new Client({intents})
+    const client = bot.client = new Client({intents, failIfNotExists: false})
     client.login(config.token)
     client.on('ready', () => bot.info('Done.'))
     client.on('messageCreate', onMessageCreate)
