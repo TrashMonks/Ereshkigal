@@ -3,6 +3,7 @@
 const {readdir} = require('fs/promises')
 const {Client, Intents} = require('discord.js')
 const {loadConfig, saveConfig} = require('./config')
+const {isAllowed} = require('./permissions')
 const defaultConfigFileName = './config.default.json'
 const configFileName = './config.json'
 const pluginDirectoryName = './plugins'
@@ -35,6 +36,16 @@ ${message.cleanContent}`
     },
 
     run: async (argsObject) => {
+        const roles = argsObject.message.member.roles.cache.keys()
+
+        if (!isAllowed(roles, argsObject.plugin.name)) {
+            bot.info(
+'The preceding command was ignored due to insufficient permissions.'
+            )
+
+            return
+        }
+
         try {
             await argsObject.action(argsObject)
         } catch (error) {
@@ -74,12 +85,6 @@ const onMessageCreate = async (message) => {
     }
 
     bot.logDiscordMessage(message)
-
-    // All commands only work for staff.
-    if (!(message.member?.roles.cache.has(bot.config.staffRole) ?? false)) {
-        return
-    }
-
     const command = message.content.replace(bot.config.commandPrefix, '')
     let argsObject = {bot, message}
 
@@ -125,12 +130,6 @@ void (async () => {
         bot.fatal(
 'Please provide a bot token by editing the "token" field in config.json. This \
 is required so the bot can authenticate with Discord.'
-        )
-    } else if (config.staffRole == null) {
-        bot.fatal(
-'Please provide the staff role ID by editing the "staffRole" field in \
-config.json. This is required because only staff are authorized to trigger \
-commands.'
         )
     }
 

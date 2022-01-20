@@ -1,0 +1,22 @@
+{
+    "roles": {
+        "staff": [],
+        "onboarder": []
+    },
+    "allowed": [
+        {
+            "commands": "*",
+            "roles": [
+                "staff"
+            ]
+        },
+        {
+            "commands": [
+                "qudprune"
+            ],
+            "roles": [
+                "onboarder"
+            ]
+        }
+    ]
+}
