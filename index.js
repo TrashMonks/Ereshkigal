@@ -1,7 +1,8 @@
 'use strict'
 
-const {readdir, writeFile} = require('fs/promises')
+const {readdir} = require('fs/promises')
 const {Client, Intents} = require('discord.js')
+const {loadConfig, saveConfig} = require('./config')
 const defaultConfigFileName = './config.default.json'
 const configFileName = './config.json'
 const pluginDirectoryName = './plugins'
@@ -27,7 +28,10 @@ ${message.cleanContent}`
     },
 
     saveConfig: async () => {
-        await writeFile(configFileName, JSON.stringify(bot.config, null, 4))
+        await saveConfig({
+            fileName:   configFileName,
+            config:     bot.config,
+        })
     },
 
     run: async (argsObject) => {
@@ -109,21 +113,12 @@ void (async () => {
     // Load the configuration.
 
     bot.info('Loading configuration...')
-    const defaultConfig = require(defaultConfigFileName)
-    let loadedConfig
 
-    try {
-        loadedConfig = require(configFileName)
-    } catch (error) {
-        if (error.code === 'MODULE_NOT_FOUND') {
-            loadedConfig = null
-        } else {
-            throw error
-        }
-    }
+    const config = bot.config = loadConfig({
+        fileName:           configFileName,
+        defaultFileName:    defaultConfigFileName,
+    })
 
-    const config = bot.config = Object.create(null)
-    Object.assign(config, defaultConfig, loadedConfig)
     await bot.saveConfig()
 
     if (config.token == null) {
