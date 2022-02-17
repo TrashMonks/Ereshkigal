@@ -12,7 +12,7 @@
         },
         {
             "commands": [
-                "qudprune"
+                "airlockcount"
             ],
             "roles": [
                 "onboarder"
