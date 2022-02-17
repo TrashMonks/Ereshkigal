@@ -4,6 +4,9 @@ module.exports = {
     name: 'airlockcount',
     usage: 'airlockcount',
     synopsis: 'Count how many users are in the airlock.',
+    description:
+"Airlock users are considered to be anyone who doesn't have the appropriate \
+member role (configured in the bot's `\"memberRoleId\"` config field).",
 
     initialize(bot) {
         ({memberRoleId} = bot.config.onboarding ?? {})

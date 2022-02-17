@@ -12,11 +12,24 @@ const isInactive = () => onboarding === null
 
 module.exports = {
     name: 'vettinglimit',
-    usage: ['vettinglimit <ticket limit>', 'vettinglimit cancel'],
+
+    usage: [
+        'vettinglimit',
+        'vettinglimit <ticket limit>',
+        'vettinglimit cancel',
+    ],
 
     synopsis:
 'Limit the number of tickets that can be opened during the next round of \
-onboarding. If a limit is already in place, set a new limit.',
+onboarding.',
+
+    description:
+'Invoking without arguments reports the current onboarding status.\n\
+Invoking with a number either starts onboarding (if it was inactive) or \
+changes the active ticket limit (if it was active).\n\
+Invoking with `cancel` removes the ticket limit. **You must manually delete \
+the panel if you want it gone.** This will also be mentioned in the bot \
+reply.',
 
     trigger: 'vettinglimit',
 

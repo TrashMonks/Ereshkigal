@@ -4,6 +4,10 @@ let logChannel
 module.exports = {
     name: 'log-avatars',
     synopsis: 'Log when users change their avatars.',
+    description:
+'Whenever a user changes their avatar (profile picture), the bot posts a \
+message in the logging channel (configured with the `"logChannelId"` config \
+field) saying who it was and what their old and new avatars are.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
