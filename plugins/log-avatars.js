@@ -3,7 +3,7 @@ let logChannel
 
 module.exports = {
     name: 'log-avatars',
-    description: 'Log when users change their avatars.',
+    synopsis: 'Log when users change their avatars.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {

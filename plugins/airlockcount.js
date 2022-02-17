@@ -3,7 +3,7 @@ let memberRoleId
 module.exports = {
     name: 'airlockcount',
     usage: 'airlockcount',
-    description: 'Count how many users are in the airlock.',
+    synopsis: 'Count how many users are in the airlock.',
 
     initialize(bot) {
         ({memberRoleId} = bot.config.onboarding ?? {})

@@ -1,7 +1,7 @@
 module.exports = {
     name: 'edit',
     usage: 'edit <message id> <new content>',
-    description: 'Edit a bot messsage, then delete the command message.',
+    synopsis: 'Edit a bot messsage, then delete the command message.',
     trigger: 'edit',
 
     async action({args, message, bot, plugin} /* [messageId, ..._]*/) {

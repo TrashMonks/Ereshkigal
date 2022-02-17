@@ -14,7 +14,7 @@ module.exports = {
     name: 'vettinglimit',
     usage: ['vettinglimit <ticket limit>', 'vettinglimit cancel'],
 
-    description:
+    synopsis:
 'Limit the number of tickets that can be opened during the next round of \
 onboarding. If a limit is already in place, set a new limit.',
 

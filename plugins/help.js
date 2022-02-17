@@ -1,7 +1,7 @@
 module.exports = {
     name: 'help',
     usage: ['help', 'help <topic>'],
-    description: "Query information about the bot's plugins.",
+    synopsis: "Query information about the bot's plugins.",
     trigger: /^help$|^help (?<topic>.*)/,
 
     action: async ({args, bot, message}) => {
@@ -9,7 +9,7 @@ module.exports = {
             const replyContent = ['The following plugins are installed. Pass a plugin name to this command for more information on it.']
 
             for (const plugin of bot.plugins) {
-                replyContent.push(`${plugin.name}: ${plugin.description}`)
+                replyContent.push(`${plugin.name}: ${plugin.synopsis}`)
             }
 
             await message.reply(replyContent.join('\n'))
@@ -24,7 +24,7 @@ module.exports = {
                 )
             } else {
                 await message.reply(
-`${plugin.name}: ${plugin.description}\n\
+`${plugin.name}: ${plugin.synopsis}\n\
 ${bot.formatUsage(plugin)}`
                 )
             }

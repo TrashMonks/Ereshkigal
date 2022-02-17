@@ -1,7 +1,7 @@
 module.exports = {
     name: 'ping',
     usage: 'ping',
-    description: 'Say "Pong!".',
+    synopsis: 'Say "Pong!".',
     trigger: 'ping',
 
     action: async ({message}) => {

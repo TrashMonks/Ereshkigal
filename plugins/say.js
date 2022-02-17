@@ -1,7 +1,7 @@
 module.exports = {
     name: 'say',
     usage: 'say <content>',
-    description: 'Post some specified text.',
+    synopsis: 'Post some specified text.',
     trigger: 'say',
 
     async action({args, message, bot, plugin}) {

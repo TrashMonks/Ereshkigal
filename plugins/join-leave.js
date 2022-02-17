@@ -3,7 +3,7 @@ let logChannel
 
 module.exports = {
     name: 'join-leave',
-    description: 'Log when users join or leave the server.',
+    synopsis: 'Log when users join or leave the server.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
