@@ -197,7 +197,21 @@ is required so the bot can authenticate with Discord.'
     // Connect to Discord.
     bot.info('Connecting...')
     const intents = Array.from(intentsSet)
-    const client = bot.client = new Client({intents, failIfNotExists: false})
+
+    const client = bot.client = new Client({
+        intents,
+
+        /* Default Message Options */
+
+        // Replying to a non-existent message creates a non-reply instead.
+        failIfNotExists: false,
+
+        // Don't mention the user we're replying to.
+        allowedMentions: {
+            repliedUser: false,
+        },
+    })
+
     bot.client = client
     client.login(config.token)
     client.on('ready', onReady)
