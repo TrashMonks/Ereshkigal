@@ -58,8 +58,27 @@ trace has been printed to the attached terminal for a maintainer to see.'
         }
     },
 
-    formatUsage: (plugin) =>
-        `Usage: ${bot.config.commandPrefix}${plugin.usage}`,
+    formatUsage: (plugin) => {
+        let usage
+
+        switch (typeof plugin.usage) {
+            case 'undefined':
+                return 'There is no usage for this plugin.'
+                break
+            case 'string':
+                usage = [plugin.usage]
+                break
+            default:
+                usage = plugin.usage
+                break
+        }
+
+        usage = usage.map((usageLine) =>
+            '    ' + bot.config.commandPrefix + usageLine
+        )
+
+        return `Usage:\n${usage.join('\n')}`
+    },
 }
 
 const onReady = async () => {

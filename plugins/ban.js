@@ -1,6 +1,6 @@
 module.exports = {
     name: 'ban',
-    usage: 'ban \<who to ban\> \<ban reason\>',
+    usage: 'ban <who to ban> <ban reason>',
     description: 'Ban a user from the server (silently).',
     trigger: 'ban',
 

@@ -1,13 +1,13 @@
 module.exports = {
     name: 'help',
-    usage: 'help [topic]',
+    usage: ['help', 'help <topic>'],
     description: "Query information about the bot's plugins.",
     trigger: /^help$|^help (?<topic>.*)/,
 
     action: async ({args, bot, message}) => {
-        const replyContent = []
-
         if (args.groups.topic === undefined) {
+            const replyContent = ['The following plugins are installed. Pass a plugin name to this command for more information on it.']
+
             for (const plugin of bot.plugins) {
                 replyContent.push(`${plugin.name}: ${plugin.description}`)
             }

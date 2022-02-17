@@ -12,7 +12,7 @@ const isInactive = () => onboarding === null
 
 module.exports = {
     name: 'vettinglimit',
-    usage: 'vettinglimit [new ticket limit OR the word `cancel`]',
+    usage: ['vettinglimit <ticket limit>', 'vettinglimit cancel'],
 
     description:
 'Limit the number of tickets that can be opened during the next round of \
