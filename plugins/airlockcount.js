@@ -1,9 +1,9 @@
 let memberRoleId
 
 module.exports = {
-    name: 'qudprune',
-    usage: 'qudprune',
-    description: 'List how many users are in the airlock.',
+    name: 'airlockcount',
+    usage: 'airlockcount',
+    description: 'Count how many users are in the airlock.',
 
     initialize(bot) {
         ({memberRoleId} = bot.config.onboarding ?? {})
@@ -17,7 +17,7 @@ be an object with the following field:\n\
         }
     },
 
-    trigger: 'qudprune',
+    trigger: 'airlockcount',
 
     async action({message}) {
         const count = message.guild.members.cache.filter((user) =>
