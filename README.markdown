@@ -1,36 +1,131 @@
-This is a Discord bot whose plugin architecture is inspired by that of [LHBot](https://github.com/mindset-tk/LHBot). It's designed specifically to help with administrative tasks for the *Caves of Qud* Discord.
+# Ereshkigal
+
+This is a [Discord](https://discord.com/) bot designed to help with administrative tasks in the [*Caves of Qud* official server](https://discord.gg/cavesofqud). It's open source; see [LICENSE](LICENSE).
+
+The bot's primary design principle is *explicitness*: If something is to be allowed, it needs to be stated unambiguously. It should be difficult to do anything, especially anything with great consequences, by accident.
+
+The bot is named after a [*Caves of Qud* character](https://wiki.cavesofqud.com/wiki/Ereshkigal).
 
 ## Usage
 
-(More complete usage instructions to come.)
+### Setup
 
-Once you have a local copy of the bot, you can run it for the first time by doing the following (assuming the working directory is the repository's root):
+This section gives instructions on how to set up the bot for the first time.
 
-1. Run `npm ci` to install dependencies.
-2. Run `node .` or `cp config.default.json config.json` to generate the configuration file.
-3. Change the `"token"` field in `config.json` to a string containing a Discord bot token. (More information is available through the [Discord Developer Portal](https://discord.com/developers/applications).)
-4. Run `node .`. If `Done.` appears in the terminal output, the bot has successfully booted.
+These instructions assume some knowledge of Discord, command line, git, and JSON; and that `node` and `npm` commands can be found by your shell.
 
-Thereafter, only `node .` is required to run the bot.
+1. Clone this repository and set it as the working directory. (All commands are assumed to be run in the root of this repository.)
+2. Run `npm ci` to install dependencies. (*Do not* run `npm install`; this can fetch different versions of the dependencies than the ones that were developed against.)
+5. Make a copy of `permissions.default.json` named `permissions.json`. Change the array associated with `"staff"` so that it contains one or more strings containing the Discord role IDs of your server's staff roles. **Only add roles that you trust with command of the bot.** (You can configure this in more detail later; see [Permissions](#Permissions).)
+6. Run `node .`. If any instructions appear, follow them and then run `node .` again. Do this as many times as necessary. If `Done.` appears in the output, the bot has successfully booted and connected to Discord.
+    - If you would rather disable a plugin than follow its instructions, delete the file of the appropriate name from `plugins/` or else move it elsewhere. You can re-enable it later by recreating the file, e.g., with `git reset`.
 
-### Permissions
+### Updating
 
-If you've *only* followed the preceding steps, no one will be able to run any commands yet, although the non-command functionality will still run. To enable commands, first run `cp permissions.default.json permissions.json` to generate the permissions file. You will at the very least need to edit it to specify which roles the human-readable strings (e.g., `"staff"` and `"onboarder"` in the default file) correspond to.
+Once the bot has already been setup, follow these instructions to update it to a new version.
 
-In the Discord client, with developer mode enabled in the settings, obtain the role ID for the role or roles you wish to consider to be staff. (Full instructions not included here (yet).) **Take care to only specify trusted roles, as they will be able to use the bot to perform admin actions.** Locate this line in the permissions file:
+1. Fetch the new version, e.g., with `git pull`.
+2. Run `npm ci` to update dependencies.
 
-            "staff": [],
+If all went well, you may now run `node .` to run the new version of the bot.
 
-Now edit it to contain the IDs you found, like so:
+## Permissions
 
-            "staff": [
-                "a role id",
-                "another role id",
-                "yet another role id"
+The bot is unpermissive by default; a given user may not run any commands unless they're explicitly given permission to do so. These permissions are determined by rules given in `permissions.json`.
+
+In this section, the `…` character in a JSON snippet stands for something that hasn't been expounded upon or that must be provided by the bot maintainer.
+
+The basic layout of the file is an object with names `"roles"` and `"allowed"`:
+
+    {
+        "roles": …,
+        "allowed": …
+    }
+
+The meanings of these are expounded in the following sections.
+
+### Role Groups
+
+The value of `"roles"` is itself an object whose names are the names of *role groups* to be defined. For example, if there are two role groups, called `staff` and `onboarder`, it might look like this:
+
+    {
+        "staff": […],
+        "onboarder": […]
+    }
+
+The contents of the arrays seen in this snippet are strings containg Discord role IDs. Any role ID included in a role group is granted all the permissions that role group is granted. Say that your server has two roles you wish to label as staff and one role you wish to label as onboarder. Then the role groups may look like this:
+
+    {
+        "staff": ["…", "…"],
+        "onboarder": ["…"]
+    }
+
+Where the `…`s must be replaced by *distinct* Discord role IDs.
+
+Discord roles that share the same role group are treated identically to each other by the bot for purposes of running commands.
+
+### Allow Rules
+
+The real significance of role groups is which commands each of them is allowed to run. This is determined by *allow rules*. The value of `"allowed"` is an array of rules in the order in which they will be tried. (The order doesn't change the outcome.)
+
+Continuing with the example role groups from the previous section, say that you wish to allow staff to use *all* commands and onboarders to use just `airlockcount` and `vettinglimit` commands. Then the allow rules might look like this:
+
+    [
+        {
+            "commands": "*",
+            "roles": [
+                "staff"
+            ]
+        },
+        {
+            "commands": [
+                "airlockcount",
+                "vettinglimit"
             ],
+            "roles": [
+                "onboarder"
+            ]
+        }
+    ]
 
-where instead of `a role id`, `another role id`, and `yet another role id`, you instead put the actual role IDs, which are strings of digits. You can specify any number of them that you wish.
+As seen in this snippet, each individual rule is given as an object with names `"commands"` and `"roles"`. The value of `"commands"` is either an array of strings, representing command names, or the string `"*"`, representing all commands. The value of `"roles"` is an array of strings, representing role groups (as defined in the previous section). Each rule can cover as many commands as needed, and as many role groups as needed.
 
-If you've done this correctly and have otherwise not changed the permissions from the default, when you start the bot, all the roles you specified should be able to run all commands available to the bot.
+In accordance with the design principles of the bot, `"*"` is *not* a valid value for `"roles"`. If some command should be executable by anyone, then a role group needs to be defined to encapsulate that.
 
-The default permissions are only suggestions; neither `"staff"` nor `"onboarder"` mean anything special to the bot itself. They only have meaning insofar as the permissions file gives them meaning.
+### Summary
+
+Putting the information from the preceding sections together, here is the final example `permissions.json` file:
+
+    {
+        "roles": {
+            "staff": ["…", "…"],
+            "onboarder": ["…"]
+        },
+        "allowed": [
+            {
+                "commands": "*",
+                "roles": [
+                    "staff"
+                ]
+            },
+            {
+                "commands": [
+                    "airlockcount",
+                    "vettinglimit"
+                ],
+                "roles": [
+                    "onboarder"
+                ]
+            }
+        ]
+    }
+
+Where the only remaining `…`s must be replaced with *distinct* role IDs.
+
+This example describes a setup where two roles are considered staff, who may execute all commands, and one role is considered onboarder, who may execute just the `airlockcount` and `vettinglimit` commands.
+
+This is only one of many possible setups; there are no restrictions on what role groups or allow rules may be defined so long as they follow the basic structure outlined in the preceding sections. The concepts of “staff” and “onboarder” are not baked into the bot; they're only given meaning by what they can and cannot do with the bot, which is entirely contained within the `permissions.json` file.
+
+## Acknowledgments
+
+The plugin-based architecture is inspired by that of [LHBot](https://github.com/mindset-tk/LHBot). This bot's predecessor is a fork of LHBot, which it's designed to replace, although it deliberately doesn't come with much of the functionality of LHBot.

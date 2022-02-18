@@ -12,7 +12,8 @@
         },
         {
             "commands": [
-                "airlockcount"
+                "airlockcount",
+                "vettinglimit"
             ],
             "roles": [
                 "onboarder"
