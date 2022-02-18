@@ -28,6 +28,8 @@ who joined or left, including a (silent) mention.',
 'Could not resolve the log channel. Make sure it refers to an existing \
 channel.'
             )
+
+            return
         }
 
         client.on('guildMemberAdd', (member) => {

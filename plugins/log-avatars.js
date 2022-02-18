@@ -28,6 +28,8 @@ field) saying who it was and what their old and new avatars are.',
 'Could not resolve the log channel. Make sure it refers to an existing \
 channel.'
             )
+
+            return
         }
 
         bot.client.on('userUpdate', async (oldUser, newUser) => {

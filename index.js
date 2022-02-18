@@ -13,10 +13,18 @@ const bot = {
         console.log(message)
     },
 
+    exitRequested: false,
+
     fatal: (message) => {
         // Show the message in bold red.
         console.log(`\x1b[1;31m${message}\x1b[m`)
-        process.exit(1)
+        bot.exitRequested = true
+    },
+
+    checkFatal: () => {
+        if (bot.exitRequested) {
+            process.exit(1)
+        }
     },
 
     logDiscordMessage: (message) => {
@@ -131,6 +139,8 @@ const onMessageCreate = async (message) => {
             }
         }
     }
+
+    bot.checkFatal()
 }
 
 void (async () => {
@@ -187,6 +197,7 @@ is required so the bot can authenticate with Discord.'
 
     console.groupEnd()
     await bot.saveConfig()
+    bot.checkFatal()
 
     // Sort plugins lexicographically by name.
     plugins.sort((pluginA, pluginB) =>

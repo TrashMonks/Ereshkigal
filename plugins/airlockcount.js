@@ -15,7 +15,7 @@ member role (configured in the bot's `\"memberRoleId\"` config field).",
             bot.fatal(
 'Please provide onboarding configuration by editing the "onboarding" field to \
 be an object with the following field:\n\
-- "memberRoleId": a role snowflakes – the role that represents server membership'
+- "memberRoleId": a role snowflake – the role that represents server membership'
             )
         }
     },
