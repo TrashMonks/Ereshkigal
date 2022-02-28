@@ -20,6 +20,8 @@ These instructions assume some knowledge of Discord, command line, git, and JSON
 6. Run `node .`. If any instructions appear, follow them and then run `node .` again. Do this as many times as necessary. If `Done.` appears in the output, the bot has successfully booted and connected to Discord.
     - If you would rather disable a plugin than follow its instructions, delete the file of the appropriate name from `plugins/` or else move it elsewhere. You can re-enable it later by recreating the file, e.g., with `git reset`.
 
+Once the bot is running, it will give some useful information if you post `!help` where it can see it and reply. (`!` is the *default* command prefix; if you've changed it, put whatever you changed it to in front of `help` instead.)
+
 ### Updating
 
 Once the bot has already been setup, follow these instructions to update it to a new version.
