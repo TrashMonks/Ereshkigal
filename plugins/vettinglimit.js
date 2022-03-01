@@ -109,10 +109,19 @@ delete it manually if you want to stop.'
             panel: null,
         }
 
-        await message.reply(
-`Okay, go ahead and post the panel in <#${panelChannelId}>.`
-        )
+        let okayMessage = `\
+Okay, go ahead and post the panel in <#${panelChannelId}>`
 
+        const panelCommandReminder = bot.config.onboarding.panelCommandReminder
+
+        if (panelCommandReminder === undefined) {
+            okayMessage += '.'
+        } else {
+            okayMessage += `\
+ by sending \`${panelCommandReminder}\` in that channel.`
+        }
+
+        await message.reply(okayMessage)
         let foundMessage
 
         while (true) {
