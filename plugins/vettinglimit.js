@@ -14,9 +14,9 @@ module.exports = {
     name: 'vettinglimit',
 
     usage: [
-        'vettinglimit',
-        'vettinglimit <ticket limit>',
-        'vettinglimit cancel',
+        'vettinglimit – Check ticket limit status.',
+        'vettinglimit <ticket limit> – Set a ticket limit.',
+        'vettinglimit cancel – Cancel a ticket limit.',
     ],
 
     synopsis:
