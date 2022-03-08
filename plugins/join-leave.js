@@ -33,11 +33,44 @@ channel.'
         }
 
         client.on('guildMemberAdd', (member) => {
-            logChannel.send(`<@${member.id}> joined the server.`)
+            const user = member.user
+
+            logChannel.send({
+                content: `<@${member.id}> joined the server.`,
+                embeds: [{
+                    author: {
+                        name: user.username + '#' + user.discriminator,
+                        icon_url: member.displayAvatarURL({dynamic: true}),
+                    },
+
+                    thumbnail: {
+                        url: member.displayAvatarURL({dynamic: true}),
+                    },
+
+                    color: 65280,
+
+                    fields: [
+                        {
+                            name: 'Joined at',
+                            value:
+`<t:${Math.floor(member.joinedTimestamp / 1000)}>`,
+                        },
+
+                        {
+                            name: 'Created at',
+                            value:
+`<t:${Math.floor(user.createdTimestamp / 1000)}>`,
+                        }
+                    ]
+                }],
+            })
         })
 
         client.on('guildMemberRemove', (member) => {
-            logChannel.send(`<@${member.id}> left the server.`)
+            logChannel.send({
+                content:
+`<@${member.id}> (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server.`,
+            })
         })
     },
 }
