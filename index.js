@@ -31,8 +31,7 @@ const bot = {
         const author = message.author
         // Show the author in bold.
         console.log(
-`\x1b[1m<${author.username}#${author.discriminator}>\x1b[m \
-${message.cleanContent}`
+`\x1b[1m<${author.username}#${author.discriminator}>\x1b[m ${message.cleanContent}`
         )
     },
 
@@ -50,7 +49,6 @@ ${message.cleanContent}`
             bot.info(
 'The preceding command was ignored due to insufficient permissions.'
             )
-
             return
         }
 
@@ -58,10 +56,8 @@ ${message.cleanContent}`
             await argsObject.action(argsObject)
         } catch (error) {
             console.error(error)
-
             await argsObject.message.reply(
-'An unhandled exception was encountered while running that command. A stack \
-trace has been printed to the attached terminal for a maintainer to see.'
+'An unhandled exception was encountered while running that command. A stack trace has been printed to the attached terminal for a maintainer to see.'
             )
         }
     },
@@ -72,7 +68,6 @@ trace has been printed to the attached terminal for a maintainer to see.'
         switch (typeof plugin.usage) {
             case 'undefined':
                 return 'There is no usage for this plugin.'
-                break
             case 'string':
                 usage = [plugin.usage]
                 break
@@ -157,8 +152,7 @@ void (async () => {
 
     if (config.token == null) {
         bot.fatal(
-'Please provide a bot token by editing the "token" field in config.json. This \
-is required so the bot can authenticate with Discord.'
+'Please provide a bot token by editing the "token" field in config.json. This is required so the bot can authenticate with Discord.'
         )
     }
 

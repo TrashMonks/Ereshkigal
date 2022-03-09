@@ -5,9 +5,7 @@ module.exports = {
     name: 'join-leave',
     synopsis: 'Log when users join or leave the server.',
     description:
-'Whenever a user joins or leaves the server, the bot posts a message in the \
-logging channel (configured with the `"logChannelId"` config field) saying \
-who joined or left, including a (silent) mention.',
+'Whenever a user joins or leaves the server, the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who joined or left, including a (silent) mention.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
@@ -28,7 +26,6 @@ who joined or left, including a (silent) mention.',
 'Could not resolve the log channel. Make sure it refers to an existing \
 channel.'
             )
-
             return
         }
 

@@ -7,11 +7,9 @@ module.exports = {
         'help <plugin name> – Show the help for the given plugin.'
     ],
 
-    description: `\
-This command provides usage information on enabled plugins. Run the command with no argument to see a complete list of all enabled plugins. Any of the bolded names can be passed as an argument to this command to find out more information about it.
-
-When a plugin's name is passed (e.g., just like was done to trigger this message), that plugin's name, synopsis, and usage (if applicable) as well as a detailed description are given. The usage is a list of one or more ways to trigger the command. As with this help command, the command trigger must be sent as a message in a place where the bot can see.
-    `,
+    description:
+`This command provides usage information on enabled plugins. Run the command with no argument to see a complete list of all enabled plugins. Any of the bolded names can be passed as an argument to this command to find out more information about it.
+When a plugin's name is passed (e.g., just like was done to trigger this message), that plugin's name, synopsis, and usage (if applicable) as well as a detailed description are given. The usage is a list of one or more ways to trigger the command. As with this help command, the command trigger must be sent as a message in a place where the bot can see.`,
 
     trigger: /^help$|^help (?<topic>.*)/,
 

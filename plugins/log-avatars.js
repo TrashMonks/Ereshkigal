@@ -5,9 +5,7 @@ module.exports = {
     name: 'log-avatars',
     synopsis: 'Log when users change their avatars.',
     description:
-'Whenever a user changes their avatar (profile picture), the bot posts a \
-message in the logging channel (configured with the `"logChannelId"` config \
-field) saying who it was and what their old and new avatars are.',
+'Whenever a user changes their avatar (profile picture), the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who it was and what their old and new avatars are.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
@@ -25,10 +23,8 @@ field) saying who it was and what their old and new avatars are.',
 
         if (logChannel === null) {
             bot.fatal(
-'Could not resolve the log channel. Make sure it refers to an existing \
-channel.'
+'Could not resolve the log channel. Make sure it refers to an existing channel.'
             )
-
             return
         }
 

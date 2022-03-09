@@ -5,17 +5,15 @@ module.exports = {
     usage: 'airlockcount',
     synopsis: 'Count how many users are in the airlock.',
     description:
-"Airlock users are considered to be anyone who doesn't have the appropriate \
-member role (configured in the bot's `\"memberRoleId\"` config field).",
+"Airlock users are considered to be anyone who doesn't have the appropriate member role (configured in the bot's `\"memberRoleId\"` config field).",
 
     initialize(bot) {
         ({memberRoleId} = bot.config.onboarding ?? {})
 
         if (memberRoleId === undefined) {
             bot.fatal(
-'Please provide onboarding configuration by editing the "onboarding" field to \
-be an object with the following field:\n\
-- "memberRoleId": a role snowflake – the role that represents server membership'
+`Please provide onboarding configuration by editing the "onboarding" field to be an object with the following field:
+- "memberRoleId": a role snowflake – the role that represents server membership`
             )
         }
     },
