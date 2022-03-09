@@ -119,8 +119,8 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
         while (true) {
             [foundMessage] = await once(bot.client, 'messageCreate')
 
-            // Quit if another command invocation canceled the onboarding.
-            if (isInactive()) {
+            // Quit if another command invocation changed onboarding state.
+            if (!isWaiting()) {
                 return
             }
 
