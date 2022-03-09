@@ -24,7 +24,7 @@ module.exports = {
     description:
 `Invoking without arguments reports the current onboarding status.
 Invoking with a number either starts onboarding (if it was inactive) or changes the active ticket limit (if it was active).
-Invoking with \`cancel\` removes the ticket limit. **You must manually delete the panel if you want it gone.** This will also be mentioned in the bot reply.`,
+Invoking with \`cancel\` removes the ticket limit and deletes the panel, if there is one.`,
     trigger: 'vettinglimit',
 
     initialize(bot) {
@@ -66,12 +66,17 @@ Invoking with \`cancel\` removes the ticket limit. **You must manually delete th
         }
 
         if (match.groups.limit === 'cancel' && !isInactive()) {
+            if (onboarding.panel === null) {
+                await message.reply('Okay, the limit has been canceled.')
+            } else {
+                await onboarding.panel.delete()
+                await message.reply(
+'Okay, the limit has been canceled and the panel deleted.'
+                )
+            }
+
             // Enter an inactive state.
             onboarding = null
-            message.reply(
-'Okay, the limit has been canceled. If there is a panel, you will need to \
-delete it manually if you want to stop.'
-            )
             return
         }
 
@@ -105,7 +110,7 @@ delete it manually if you want to stop.'
             okayMessage += '.'
         } else {
             okayMessage +=
-`by sending \`${panelCommandReminder}\` in that channel.`
+` by sending \`${panelCommandReminder}\` in that channel.`
         }
 
         await message.reply(okayMessage)
@@ -131,7 +136,7 @@ delete it manually if you want to stop.'
         onboarding.panel = foundMessage
 
         await message.reply(
-`Okay, I found the panel. It will be deleted when the limit of ${onboarding.limit} is reached.`
+`Okay, I found the panel. It will be deleted when the limit of ${onboarding.limit} is reached or when \`${bot.config.commandPrefix}vettinglimit cancel\` is run.`
         )
 
         while (true) {
