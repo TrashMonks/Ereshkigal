@@ -51,13 +51,13 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
         // If no arguments are given, report what state onboarding is in.
         if (match === null) {
             if (isInactive()) {
-                message.reply(
+                await message.reply(
 'Inactive. No ticket limit is currently being tracked.'
                 )
             } else if (isWaiting()) {
-                message.reply('Waiting for a panel to be posted.')
+                await message.reply('Waiting for a panel to be posted.')
             } else {
-                message.reply(
+                await message.reply(
 `Active. ${onboarding.current}/${onboarding.limit} tickets have been opened.`
                 )
             }
