@@ -213,6 +213,7 @@ void (async () => {
 
         // Don't mention the user we're replying to.
         allowedMentions: {
+            parse: ['roles', 'users'],
             repliedUser: false,
         },
     })

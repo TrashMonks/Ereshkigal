@@ -33,7 +33,7 @@ channel.'
             const user = member.user
 
             logChannel.send({
-                content: `<@${member.id}> joined the server.`,
+                content: `${member} joined the server.`,
                 embeds: [{
                     author: {
                         name: user.username + '#' + user.discriminator,
@@ -66,7 +66,7 @@ channel.'
         client.on('guildMemberRemove', (member) => {
             logChannel.send({
                 content:
-`<@${member.id}> (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server.`,
+`${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server.`,
             })
         })
     },

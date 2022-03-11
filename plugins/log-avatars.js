@@ -55,8 +55,6 @@ module.exports = {
                             },
                         }
                     ],
-
-                    allowed_mentions: {parse: []}
                 })
             }
         })
