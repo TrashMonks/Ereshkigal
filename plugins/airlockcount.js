@@ -21,10 +21,10 @@ module.exports = {
     trigger: 'airlockcount',
 
     async action({message}) {
-        const count = message.guild.members.cache.filter((user) =>
-            !user.roles.cache.has(memberRoleId)
-        ).size
-
+        const guild = message.guild
+        await guild.members.fetch()
+        const memberRole = await guild.roles.fetch(memberRoleId)
+        const count = guild.memberCount - memberRole.members.size
         message.reply(`There are ${count} users in the airlock.`)
     },
 }
