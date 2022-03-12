@@ -3,9 +3,9 @@ let logChannel
 
 module.exports = {
     name: 'log-avatars',
-    synopsis: 'Log when users change their avatars.',
+    synopsis: 'Log when airlock users change their avatars.',
     description:
-'Whenever a user changes their avatar (profile picture), the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who it was and what their old and new avatars are.',
+'Whenever an airlock user changes their avatar (profile picture), the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who it was and what their old and new avatars are.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
@@ -14,6 +14,15 @@ module.exports = {
         if (logChannelId === undefined) {
             bot.fatal(
 'Please specify a logging channel by editing the "logChannelId" field.'
+            )
+        }
+
+        ({memberRoleId} = bot.config.onboarding ?? {})
+
+        if (memberRoleId === undefined) {
+            bot.fatal(
+`Please provide onboarding configuration by editing the "onboarding" field to be an object with the following field:
+- "memberRoleId": a role snowflake – the role that represents server membership`
             )
         }
     },
@@ -29,6 +38,12 @@ module.exports = {
         }
 
         bot.client.on('userUpdate', async (oldUser, newUser) => {
+            const member = await logChannel.guild.members.fetch(newUser)
+
+            if (member.roles.cache.has(bot.config.onboarding.memberRoleId)) {
+                return
+            }
+
             const oldAvatar = oldUser.displayAvatarURL()
             const newAvatar = newUser.displayAvatarURL()
 
