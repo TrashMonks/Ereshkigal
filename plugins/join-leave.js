@@ -66,7 +66,7 @@ channel.'
         client.on('guildMemberRemove', (member) => {
             logChannel.send({
                 content:
-`${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server.`,
+`${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server :<`,
             })
         })
     },
