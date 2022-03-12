@@ -5,7 +5,7 @@ module.exports = {
     name: 'log-avatars',
     synopsis: 'Log when airlock users change their avatars.',
     description:
-'Whenever an airlock user changes their avatar (profile picture), the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who it was and what their old and new avatars are.',
+'Whenever an airlock user changes their avatar (profile picture), the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who it was and what their old and new avatars are. The new avatar is shown larger than the old.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
@@ -44,8 +44,8 @@ module.exports = {
                 return
             }
 
-            const oldAvatar = oldUser.displayAvatarURL()
-            const newAvatar = newUser.displayAvatarURL()
+            const oldAvatar = oldUser.displayAvatarURL({dynamic: true})
+            const newAvatar = newUser.displayAvatarURL({dynamic: true})
 
             if (oldAvatar !== newAvatar) {
                 logChannel.send({
@@ -53,22 +53,14 @@ module.exports = {
 
                     embeds: [
                         {
-                            description: 'Old avatar:',
-
-                            image: {
-                                url: oldAvatar,
-                                width: 512, height: 512,
+                            author: {
+                                name: newUser.username + '#' + newUser.discriminator,
+                                icon_url: newAvatar,
                             },
+
+                            thumbnail: {url: oldAvatar},
+                            image: {url: newAvatar},
                         },
-
-                        {
-                            description: 'New avatar:',
-
-                            image: {
-                                url: newAvatar,
-                                width: 512, height: 512,
-                            },
-                        }
                     ],
                 })
             }
