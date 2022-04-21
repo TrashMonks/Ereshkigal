@@ -15,10 +15,14 @@ const bot = {
 
     exitRequested: false,
 
-    fatal: (message) => {
+    fatal: (message, immediatelyFatal = false) => {
         // Show the message in bold red.
         console.log(`\x1b[1;31m${message}\x1b[m`)
         bot.exitRequested = true
+
+        if (immediatelyFatal) {
+            bot.checkFatal()
+        }
     },
 
     checkFatal: () => {
@@ -85,12 +89,26 @@ const bot = {
 }
 
 const onReady = async () => {
+    const guildsCache = bot.client.guilds.cache
+
+    if (guildsCache.size !== 1) {
+        console.log(guildsCache)
+        bot.fatal('Must be in exactly one guild.', true)
+    }
+
+    await guildsCache.first().members.fetch()
+
     for (const plugin of bot.plugins) {
         if (plugin.ready !== undefined) {
             await plugin.ready(bot)
         }
     }
 
+    bot.client.on('guildCreate', () =>
+        bot.fatal('Must be in exactly one guild.', true)
+    )
+
+    bot.client.on('messageCreate', onMessageCreate)
     bot.info('Done.')
 }
 
@@ -221,5 +239,4 @@ void (async () => {
     bot.client = client
     client.login(config.token)
     client.on('ready', onReady)
-    client.on('messageCreate', onMessageCreate)
 })()
