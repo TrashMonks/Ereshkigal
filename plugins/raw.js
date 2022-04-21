@@ -1,28 +1,29 @@
-const { Readable } = require("stream")
-const Discord = require("discord.js")
-
+const {Readable} = require("stream")
+const {MessageAttachment} = require("discord.js")
 
 module.exports = {
     name: 'raw',
-    usage: 'raw <message id>',
-    synopsis: 'DM the raw Discord markdown text that was written to make a message, then delete the command message.',
+    usage: 'raw <message uri>',
+    synopsis:
+'Show the raw formatting of a message.',
     description:
-`Given the ID of a message in the same channel as the command, the bot provides the original Discord markdown text that was used to create the message via DM, then deletes the message that triggered the command.`,
+'Given a message URI, provide as an attachment the raw Discord formatting that was used to create the message.',
     trigger: 'raw',
 
     async action({args, message, bot, plugin}) {
-        const match = /^(?<messageId>[^ ]+)$/s.exec(args)
+        const match = /^https:\/\/discord.com\/channels\/(?<guildId>\d+)\/(?<channelId>\d+)\/(?<messageId>\d+)$/s.exec(args)
 
         if (match === null) {
             await message.reply(bot.formatUsage(plugin))
             return
         }
 
-        const messageToProvide =
-            await message.channel.messages.fetch(match.groups.messageId)
+        const channelId = match.groups.channelId
+        const messageId = match.groups.messageId
+        const channel = message.guild.channels.resolve(channelId)
+        const messageToProvide = await channel?.messages.fetch(messageId)
         const attachmentStream = Readable.from([messageToProvide.content])
-        const attachment = new Discord.MessageAttachment(attachmentStream, 'attachment.md')
-        await message.author.send({files: [attachment]})
-        await message.delete()
+        const attachment = new MessageAttachment(attachmentStream, `raw-${messageId}.txt`)
+        await message.reply({files: [attachment]})
     },
 }
