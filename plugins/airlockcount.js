@@ -1,3 +1,4 @@
+const {fatal} = require('../log')
 let memberRoleId
 
 module.exports = {
@@ -11,7 +12,7 @@ module.exports = {
         ({memberRoleId} = bot.config.onboarding ?? {})
 
         if (memberRoleId === undefined) {
-            bot.fatal(
+            fatal(
 `Please provide onboarding configuration by editing the "onboarding" field to be an object with the following field:
 - "memberRoleId": a role snowflake – the role that represents server membership`
             )

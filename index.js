@@ -3,34 +3,13 @@
 const {readdir} = require('fs/promises')
 const {Client, Intents} = require('discord.js')
 const {loadConfig, saveConfig} = require('./config')
+const {info, fatal, checkFatal} = require('./log')
 const {isAllowed} = require('./permissions')
 const defaultConfigFileName = './config.default.json'
 const configFileName = './config.json'
 const pluginDirectoryName = './plugins'
 
 const bot = {
-    info: (message) => {
-        console.log(message)
-    },
-
-    exitRequested: false,
-
-    fatal: (message, immediatelyFatal = false) => {
-        // Show the message in bold red.
-        console.log(`\x1b[1;31m${message}\x1b[m`)
-        bot.exitRequested = true
-
-        if (immediatelyFatal) {
-            bot.checkFatal()
-        }
-    },
-
-    checkFatal: () => {
-        if (bot.exitRequested) {
-            process.exit(1)
-        }
-    },
-
     logDiscordMessage: (message) => {
         const author = message.author
         // Show the author in bold.
@@ -50,7 +29,7 @@ const bot = {
         const roles = argsObject.message.member.roles.cache.keys()
 
         if (!isAllowed(roles, argsObject.plugin.name)) {
-            bot.info(
+            info(
 'The preceding command was ignored due to insufficient permissions.'
             )
             return
@@ -93,7 +72,7 @@ const onReady = async () => {
 
     if (guildsCache.size !== 1) {
         console.log(guildsCache)
-        bot.fatal('Must be in exactly one guild.', true)
+        fatal('Must be in exactly one guild.', true)
     }
 
     await guildsCache.first().members.fetch()
@@ -105,11 +84,11 @@ const onReady = async () => {
     }
 
     bot.client.on('guildCreate', () =>
-        bot.fatal('Must be in exactly one guild.', true)
+        fatal('Must be in exactly one guild.', true)
     )
 
     bot.client.on('messageCreate', onMessageCreate)
-    bot.info('Done.')
+    info('Done.')
 }
 
 const onMessageCreate = async (message) => {
@@ -153,13 +132,13 @@ const onMessageCreate = async (message) => {
         }
     }
 
-    bot.checkFatal()
+    checkFatal()
 }
 
 void (async () => {
     // Load the configuration.
 
-    bot.info('Loading configuration...')
+    info('Loading configuration...')
 
     const config = bot.config = loadConfig({
         fileName:           configFileName,
@@ -169,7 +148,7 @@ void (async () => {
     await bot.saveConfig()
 
     if (config.token == null) {
-        bot.fatal(
+        fatal(
 'Please provide a bot token by editing the "token" field in config.json. This is required so the bot can authenticate with Discord.'
         )
     }
@@ -209,7 +188,7 @@ void (async () => {
 
     console.groupEnd()
     await bot.saveConfig()
-    bot.checkFatal()
+    checkFatal()
 
     // Sort plugins lexicographically by name.
     plugins.sort((pluginA, pluginB) =>
@@ -218,7 +197,7 @@ void (async () => {
                                        0)
 
     // Connect to Discord.
-    bot.info('Connecting...')
+    info('Connecting...')
     const intents = Array.from(intentsSet)
 
     const client = bot.client = new Client({

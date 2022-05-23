@@ -1,3 +1,4 @@
+const {fatal} = require('../log')
 let logChannelId
 let logChannel
 
@@ -12,7 +13,7 @@ module.exports = {
         ({logChannelId} = bot.config ?? {})
 
         if (logChannelId === undefined) {
-            bot.fatal(
+            fatal(
 'Please specify a logging channel by editing the "logChannelId" field.'
             )
         }
@@ -20,7 +21,7 @@ module.exports = {
         ({memberRoleId} = bot.config.onboarding ?? {})
 
         if (memberRoleId === undefined) {
-            bot.fatal(
+            fatal(
 `Please provide onboarding configuration by editing the "onboarding" field to be an object with the following field:
 - "memberRoleId": a role snowflake – the role that represents server membership`
             )
@@ -31,7 +32,7 @@ module.exports = {
         logChannel = bot.client.channels.resolve(logChannelId)
 
         if (logChannel === null) {
-            bot.fatal(
+            fatal(
 'Could not resolve the log channel. Make sure it refers to an existing channel.'
             )
             return

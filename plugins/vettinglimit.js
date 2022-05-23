@@ -1,4 +1,5 @@
 const {once} = require('events')
+const {fatal} = require('../log')
 
 let panelChannelId
 let panelPosterId
@@ -36,7 +37,7 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
             panelPosterId === undefined ||
             onboardingCategoryIds === undefined
         ) {
-            bot.fatal(
+            fatal(
 `Please provide onboarding configuration by editing the "onboarding" field to be an object with the following fields:
 - "panelChannelId": a channel snowflake – the channel to look for panels in
 - "panelPosterId": a user snowflake – the bot user that posts panels

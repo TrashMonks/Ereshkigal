@@ -1,3 +1,4 @@
+const {fatal} = require('../log')
 let logChannelId
 let logChannel
 
@@ -12,7 +13,7 @@ module.exports = {
         ({logChannelId} = bot.config ?? {})
 
         if (logChannelId === undefined) {
-            bot.fatal(
+            fatal(
 'Please specify a logging channel by editing the "logChannelId" field.'
             )
         }
@@ -22,7 +23,7 @@ module.exports = {
         logChannel = client.channels.resolve(logChannelId)
 
         if (logChannel === null) {
-            bot.fatal(
+            fatal(
 'Could not resolve the log channel. Make sure it refers to an existing \
 channel.'
             )
