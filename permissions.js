@@ -71,9 +71,9 @@ const getAllowedSet = (roles) => {
     for (const roleAllowedSet of [...roles].map(getRoleAllowedSet)) {
         if (roleAllowedSet === '*') {
             return '*'
+        } else if (roleAllowedSet !== undefined) {
+            mergeSetsDestructively(allowedSet, roleAllowedSet)
         }
-
-        mergeSetsDestructively(allowedSet, roleAllowedSet)
     }
     return allowedSet
 }
