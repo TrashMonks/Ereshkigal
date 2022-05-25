@@ -2,6 +2,15 @@ const {loadConfig, saveConfig} = require('./config')
 const defaultPermissionsFileName = './permissions.default.json'
 const permissionsFileName = './permissions.json'
 
+// Add all elements of setB to setA.
+// setA must be a Set. setB need only be iterable.
+const mergeSetsDestructively = (setA, setB) => {
+    for (const element of setB) {
+        setA.add(element)
+    }
+    return setA
+}
+
 const permissions = Object.freeze(loadConfig({
     fileName:           permissionsFileName,
     defaultFileName:    defaultPermissionsFileName,
@@ -34,9 +43,7 @@ for (const rule of permissions.allowed) {
                 cache.set(role, new Set(rule.commands))
             // There are commands already cached; add to the existing set.
             } else {
-                for (const command of rule.commands) {
-                    cachedCommands.add(command)
-                }
+                mergeSetsDestructively(cachedCommands, rule.commands)
             }
         }
     }
@@ -57,6 +64,21 @@ const isAllowed = (roles, command) => {
     return false
 }
 
+const getRoleAllowedSet = (role) => cache.get(role)
+
+const getAllowedSet = (roles) => {
+    const allowedSet = new Set
+    for (const roleAllowedSet of [...roles].map(getRoleAllowedSet)) {
+        if (roleAllowedSet === '*') {
+            return '*'
+        }
+
+        mergeSetsDestructively(allowedSet, roleAllowedSet)
+    }
+    return allowedSet
+}
+
 module.exports = {
     isAllowed,
+    getAllowedSet,
 }

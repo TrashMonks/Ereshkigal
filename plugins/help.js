@@ -1,3 +1,5 @@
+const {getAllowedSet} = require('../permissions')
+
 module.exports = {
     name: 'help',
     synopsis: 'Query information about enabled plugins.',
@@ -15,10 +17,15 @@ When a plugin's name is passed (e.g., just like was done to trigger this message
 
     action: async ({args, bot, message}) => {
         if (args.groups.topic === undefined) {
+            const allowedSet = getAllowedSet(message.member.roles.cache.keys())
             const commandSynopses = []
             const otherSynopses = []
 
             for (const plugin of bot.plugins) {
+                if (allowedSet !== '*' && !allowedSet.has(plugin.name)) {
+                    continue
+                }
+
                 const category =
                     plugin.usage === undefined ? otherSynopses
                     /* otherwise */            : commandSynopses
@@ -27,13 +34,16 @@ When a plugin's name is passed (e.g., just like was done to trigger this message
             }
 
             await message.reply(
-`The following plugins are enabled. Run \`${bot.config.commandPrefix}help help\` for more information.
+`The following plugins are enabled${
+    allowedSet === '*' ? ''
+    /* otherwise */    : ' and usable by you'
+}. Run \`${bot.config.commandPrefix}help help\` for more information.
 
 __Command Plugins__
-${commandSynopses.join('\n')}
+${commandSynopses.join('\n') || '(None)'}
 
 __Other Plugins__
-${otherSynopses.join('\n')}`
+${otherSynopses.join('\n') || '(None)'}`
             )
         } else {
             const plugin = bot.plugins.find((plugin) =>

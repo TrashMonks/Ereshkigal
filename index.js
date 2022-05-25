@@ -26,7 +26,7 @@ const bot = {
     },
 
     run: async (argsObject) => {
-        const roles = argsObject.message.member.roles.cache.keys()
+        const roles = new Set(argsObject.message.member.roles.cache.keys())
 
         if (!isAllowed(roles, argsObject.plugin.name)) {
             info(
