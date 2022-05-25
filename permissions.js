@@ -7,43 +7,56 @@ const permissions = Object.freeze(loadConfig({
     defaultFileName:    defaultPermissionsFileName,
 }))
 
-// The permissions configuration uses human-readable names for allow rules, but
-// we're expecting to be given less readable internal identifiers, so we build
-// up a reverse lookup table here once instead of searching for the appropriate
-// role every time we're asked to check a permission.
+// The permissions file specifies command permission in terms of role groups.
+// Since permissions are always checked in terms of individual roles instead of
+// groups, it's more convenient to look them up by individual role, so a cache
+// is populated for that purpose.
 
-const roleIdsToAliases = new Map()
+// The cache is a map whose keys are roles and whose values are either:
+// - '*', meaning all commands; or
+// - a set of commands.
 
-for (const roleAlias of Object.keys(permissions.roles)) {
-    for (const roleId of permissions.roles[roleAlias]) {
-        roleIdsToAliases.set(roleId, roleAlias)
+const cache = new Map
+
+// Populate the cache.
+for (const rule of permissions.allowed) {
+    for (const roleGroup of rule.roles) {
+        for (const role of permissions.roles[roleGroup]) {
+            const cachedCommands = cache.get(role)
+            // * is already cached, so there is nothing to do.
+            if (cachedCommands === '*') {
+                continue
+            // * supercedes anything that was already cached.
+            } else if (rule.commands === '*') {
+                cache.set(role, '*')
+            // There are no commands cached yet for this role; make a new set.
+            } else if (cachedCommands === undefined) {
+                cache.set(role, new Set(rule.commands))
+            // There are commands already cached; add to the existing set.
+            } else {
+                for (const command of rule.commands) {
+                    cachedCommands.add(command)
+                }
+            }
+        }
     }
 }
 
-module.exports = {
-    isAllowed(roleIds, command) {
-        const roleAliasesSet = new Set()
+const roleIsAllowed = (role, command) => {
+    const commands = cache.get(role)
+    return commands === '*' || (commands?.has(command) ?? false)
+}
 
-        for (const roleId of roleIds) {
-            const roleAlias = roleIdsToAliases.get(roleId)
-
-            if (roleAlias !== undefined) {
-                roleAliasesSet.add(roleAlias)
-            }
+const isAllowed = (roles, command) => {
+    for (const role of roles) {
+        if (roleIsAllowed(role, command)) {
+            return true
         }
-
-        for (const rule of permissions.allowed) {
-            // Grant access if:
-            // - the rule applies to all commands OR specifically this one
-            // - and the rule applies to at least one of the provided roles
-            if (
-                (rule.commands === '*' || rule.commands.includes(command)) &&
-                rule.roles.some((role) => roleAliasesSet.has(role))
-            ) {
-                return true
-            }
-        }
-
-        return false
     }
+
+    return false
+}
+
+module.exports = {
+    isAllowed,
 }
