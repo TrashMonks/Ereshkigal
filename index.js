@@ -156,15 +156,15 @@ void (async () => {
     // Load all plugins.
     // Loading a plugin consists of:
     // - requiring it as a module;
-    // - querying the intents it needs (GUILDS and GUILD_MESSAGES intents are
-    //   assumed);
+    // - querying the intents it needs;
     // - running its initialize function if it has one.
     // All of this happens before connection so that any plugin can abort at
     // any point if its needs aren't met.
+    // GUILDS, GUILD_MEMBERS, and GUILD_MESSAGES intents are always requested.
 
     console.group('Loading plugins...')
     const pluginFileNames = await readdir(pluginDirectoryName)
-    const intentsSet = new Set(['GUILDS', 'GUILD_MESSAGES'])
+    const intentsSet = new Set(['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES'])
     const plugins = bot.plugins = []
 
     for (const pluginFileName of pluginFileNames) {
