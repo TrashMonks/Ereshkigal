@@ -9,42 +9,44 @@ const defaultConfigFileName = './config.default.json'
 const configFileName = './config.json'
 const pluginDirectoryName = './plugins'
 
-const bot = {
-    logDiscordMessage: (message) => {
-        const author = message.author
-        // Show the author in bold.
-        console.log(
-`\x1b[1m<${author.username}#${author.discriminator}>\x1b[m ${message.cleanContent}`
-        )
-    },
+// Add ANSI sequences to the given string that cause a terminal to bold it.
+const bold = (string) => `\x1b[1m${string}\x1b[m`
 
-    saveConfig: async () => {
-        await saveConfig({
-            fileName:   configFileName,
-            config:     bot.config,
-        })
-    },
+const logDiscordMessage = (message) => {
+    const {username, discriminator} = message.author
+    console.log(
+        bold(`<${username}#${discriminator}>`) + ' ' + message.cleanContent
+    )
+}
 
-    run: async (argsObject) => {
-        const roles = new Set(argsObject.message.member.roles.cache.keys())
+const saveMainConfig = async () => {
+    await saveConfig({
+        fileName:   configFileName,
+        config:     bot.config,
+    })
+}
 
-        if (!isAllowed(roles, argsObject.plugin.name)) {
-            info(
+const runCommand = async (argsObject) => {
+    const roles = new Set(argsObject.message.member.roles.cache.keys())
+
+    if (!isAllowed(roles, argsObject.plugin.name)) {
+        info(
 'The preceding command was ignored due to insufficient permissions.'
-            )
-            return
-        }
+        )
+        return
+    }
 
-        try {
-            await argsObject.action(argsObject)
-        } catch (error) {
-            console.error(error)
-            await argsObject.message.reply(
+    try {
+        await argsObject.action(argsObject)
+    } catch (error) {
+        console.error(error)
+        await argsObject.message.reply(
 'An unhandled exception was encountered while running that command. A stack trace has been printed to the attached terminal for a maintainer to see.'
-            )
-        }
-    },
+        )
+    }
+}
 
+const bot = {
     formatUsage: (plugin) => {
         let usage
 
@@ -67,8 +69,8 @@ const bot = {
     },
 }
 
-const onReady = async () => {
-    const guildsCache = bot.client.guilds.cache
+const onReady = async (client) => {
+    const guildsCache = client.guilds.cache
 
     if (guildsCache.size !== 1) {
         console.log(guildsCache)
@@ -83,11 +85,11 @@ const onReady = async () => {
         }
     }
 
-    bot.client.on('guildCreate', () =>
+    client.on('guildCreate', () =>
         fatal('Must be in exactly one guild.', true)
     )
 
-    bot.client.on('messageCreate', onMessageCreate)
+    client.on('messageCreate', onMessageCreate)
     info('Done.')
 }
 
@@ -103,7 +105,7 @@ const onMessageCreate = async (message) => {
         return
     }
 
-    bot.logDiscordMessage(message)
+    logDiscordMessage(message)
     const command = message.content.replace(bot.config.commandPrefix, '')
     let argsObject = {bot, message}
 
@@ -117,7 +119,7 @@ const onMessageCreate = async (message) => {
                     .replace(/^ /, '')
 
                 argsObject.plugin = plugin
-                bot.run(argsObject)
+                runCommand(argsObject)
                 break
             }
         } else if (plugin.trigger instanceof RegExp) {
@@ -126,7 +128,7 @@ const onMessageCreate = async (message) => {
             argsObject.plugin = plugin
 
             if (argsObject.args !== null) {
-                bot.run(argsObject)
+                runCommand(argsObject)
                 break
             }
         }
@@ -145,7 +147,7 @@ void (async () => {
         defaultFileName:    defaultConfigFileName,
     })
 
-    await bot.saveConfig()
+    await saveMainConfig()
 
     if (config.token == null) {
         fatal(
@@ -187,7 +189,7 @@ void (async () => {
     }
 
     console.groupEnd()
-    await bot.saveConfig()
+    await saveMainConfig()
     checkFatal()
 
     // Sort plugins lexicographically by name.
@@ -215,7 +217,6 @@ void (async () => {
         },
     })
 
-    bot.client = client
     client.login(config.token)
     client.on('ready', onReady)
 })()
