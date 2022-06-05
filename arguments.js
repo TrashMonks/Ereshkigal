@@ -22,14 +22,17 @@ const parsers = {
     async channel(string, message) {
         if (string === 'here') { return message.channel }
         const match =
-/^https:\/\/discord.com\/channels\/(?<guildId>\d+)\/(?<channelId>\d+)$/.exec(string)
+/^https:\/\/discord.com\/channels\/(?<guildId>\d+)\/(?<channelId>\d+)$/.exec(string) ?? /^<#(?<channelId>\d+)>$/.exec(string)
         const channelId = match === null  ? string
                         : /* otherwise */   match.groups.channelId
         return await message.guild.channels.fetch(channelId)
     },
 
     async member(string, message) {
-        return await message.guild.members.fetch(string)
+        const match = /^<@(?<userId>\d+)>$/.exec(string)
+        const userId = match === null  ? string
+                     : /* otherwise */   match.groups.userId
+        return await message.guild.members.fetch(userId)
     },
 
     async message(string, message) {
