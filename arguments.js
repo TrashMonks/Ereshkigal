@@ -20,6 +20,7 @@ const parsers = {
     /* Discord types */
 
     async channel(string, message) {
+        if (string === 'here') { return message.channel }
         const match =
 /^https:\/\/discord.com\/channels\/(?<guildId>\d+)\/(?<channelId>\d+)$/.exec(string)
         const channelId = match === null  ? string
