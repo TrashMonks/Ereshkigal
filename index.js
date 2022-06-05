@@ -35,6 +35,8 @@ const prettyUsage = (prefix, name, usage) => {
         if (arg.type === 'rest') {
             argStrings.push(`<${arg.name}>`)
             typeExplanations.push(`${arg.name} is some text`)
+        } else if (arg.type === 'literal') {
+            argStrings.push(arg.name)
         } else {
             argStrings.push(`<${arg.name}>`)
             typeExplanations.push(`${arg.name} is ${arg.type.prettyName}`)

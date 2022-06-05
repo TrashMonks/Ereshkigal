@@ -16,7 +16,7 @@ module.exports = {
     usage: [
         '',
         'ticketLimit:wholeNumber',
-        'cancel:string',
+        '"cancel"',
     ],
     synopsis:
 'Limit the number of tickets that can be opened during the next round of onboarding.',
@@ -42,7 +42,7 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
         }
     },
 
-    async run({ticketLimit, cancel}, message, bot, plugin) {
+    async run({ticketLimit, cancel}, message, bot) {
         if (ticketLimit === undefined && cancel === undefined) {
             // No arguments; report status.
             if (isInactive()) {
@@ -59,12 +59,7 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
             return
         }
 
-        if (cancel !== undefined) {
-            if (cancel !== 'cancel') {
-                message.reply(bot.formatUsage(plugin))
-                return
-            }
-
+        if (cancel) {
             if (isInactive()) {
                 await message.reply('There is nothing to cancel.')
             } else {

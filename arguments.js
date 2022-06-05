@@ -60,11 +60,12 @@ parsers.message.prettyName = 'a message'
 // Arguments    → Argument (" " Arguments)?
 //              | RestArgument
 // Argument     → Name ":" Type
+//              → '"' Identifier '"'
 // Type         → Identifier
 // RestArgument → "..." Name
 // Name         → Identifier
 // Identifier   → /[A-Za-z_]+/
-// Example usage string: "message:message ...content"
+// Example usage string: 'message:message "hello" ...content'
 // If the usage string does not match the grammar, throw UsageSyntaxError.
 const parseUsage = (usageString) => {
     if (usageString === '') {
@@ -76,33 +77,42 @@ const parseUsage = (usageString) => {
     return argumentStrings.map((argumentString, index) => {
         const restMatch = /^\.\.\.(?<name>[A-Za-z_]+)$/.exec(argumentString)
 
-        if (restMatch === null) {
-            const nameTypeMatch =
-/^(?<name>[A-Za-z_]+):(?<type>[A-Za-z_]+)$/.exec(argumentString)
-
-            if (nameTypeMatch === null) {
-                throw new UsageSyntaxError('malformed argument')
-            }
-
-            const parser = parsers[nameTypeMatch.groups.type]
-
-            if (parser === undefined) {
-                throw new UsageSyntaxError('unknown argument type')
-            }
-
-            return {
-                name: nameTypeMatch.groups.name,
-                type: parser,
-            }
-        } else {
+        if (restMatch !== null) {
             if (index !== argumentStrings.length - 1) {
                 throw new UsageSyntaxError('rest argument not at end of list')
             }
 
             return {
+                type: 'rest',
                 name: restMatch.groups.name,
-                type: 'rest'
             }
+        }
+
+        const literalMatch = /^"(?<literal>[A-Za-z_]+)"$/.exec(argumentString)
+
+        if (literalMatch !== null) {
+            return {
+                type: 'literal',
+                name: literalMatch.groups.literal,
+            }
+        }
+
+        const nameTypeMatch =
+/^(?<name>[A-Za-z_]+):(?<type>[A-Za-z_]+)$/.exec(argumentString)
+
+        if (nameTypeMatch === null) {
+            throw new UsageSyntaxError('malformed argument')
+        }
+
+        const parser = parsers[nameTypeMatch.groups.type]
+
+        if (parser === undefined) {
+            throw new UsageSyntaxError('unknown argument type')
+        }
+
+        return {
+            type: parser,
+            name: nameTypeMatch.groups.name,
         }
     })
 }
@@ -130,22 +140,31 @@ const parseArguments = async (argsString, usages, message) => {
                 continue eachUsage
             }
 
-            let parseResult
-            try {
-                parseResult = await arg.type(
-                    argMatch.groups.next,
-                    message
-                )
-            } catch (error) {
-                console.error(error)
-                continue eachUsage
+            if (arg.type === 'literal') {
+                if (argMatch.groups.next === arg.name) {
+                    result[arg.name] = true
+                } else {
+                    continue eachUsage
+                }
+            } else {
+                let parseResult
+                try {
+                    parseResult = await arg.type(
+                        argMatch.groups.next,
+                        message
+                    )
+                } catch (error) {
+                    console.error(error)
+                    continue eachUsage
+                }
+
+                if (parseResult == null) {
+                    continue eachUsage
+                }
+
+                result[arg.name] = parseResult
             }
 
-            if (parseResult == null) {
-                continue eachUsage
-            }
-
-            result[arg.name] = parseResult
             remainingArgs = argMatch.groups.rest
         }
 
