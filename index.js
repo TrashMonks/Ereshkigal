@@ -2,6 +2,7 @@
 
 const {readdir} = require('fs/promises')
 const {Client, Intents} = require('discord.js')
+const {parseUsage, parseArguments, UsageSyntaxError} = require('./arguments')
 const {loadConfig, saveConfig} = require('./config')
 const {info, fatal, checkFatal} = require('./log')
 const {isAllowed} = require('./permissions')
@@ -26,26 +27,6 @@ const saveMainConfig = async () => {
     })
 }
 
-const runCommand = async (argsObject) => {
-    const roles = new Set(argsObject.message.member.roles.cache.keys())
-
-    if (!isAllowed(roles, argsObject.plugin.name)) {
-        info(
-'The preceding command was ignored due to insufficient permissions.'
-        )
-        return
-    }
-
-    try {
-        await argsObject.action(argsObject)
-    } catch (error) {
-        console.error(error)
-        await argsObject.message.reply(
-'An unhandled exception was encountered while running that command. A stack trace has been printed to the attached terminal for a maintainer to see.'
-        )
-    }
-}
-
 const bot = {
     formatUsage: (plugin) => {
         let usage
@@ -62,7 +43,7 @@ const bot = {
         }
 
         usage = usage.map((usageLine) =>
-            '    ' + bot.config.commandPrefix + usageLine
+            '    ' + bot.config.commandPrefix + plugin.name + ' ' + usageLine
         )
 
         return `Usage:\n${usage.join('\n')}`
@@ -79,7 +60,7 @@ const onReady = async (client) => {
 
     await guildsCache.first().members.fetch()
 
-    for (const plugin of bot.plugins) {
+    for (const [_, plugin] of bot.plugins) {
         if (plugin.ready !== undefined) {
             await plugin.ready(bot)
         }
@@ -107,31 +88,37 @@ const onMessageCreate = async (message) => {
 
     logDiscordMessage(message)
     const command = message.content.replace(bot.config.commandPrefix, '')
-    let argsObject = {bot, message}
+    const [name, argsString = ''] = command.split(/\s+(.*)/s, 2)
+    const plugin = bot.plugins.get(name)
+    if (plugin === undefined) { return }
 
-    for (const plugin of bot.plugins) {
-        if (typeof plugin.trigger === 'string') {
-            if (command.startsWith(plugin.trigger)) {
-                argsObject.action = plugin.action
+    const roles = new Set(message.member.roles.cache.keys())
 
-                argsObject.args = command
-                    .replace(plugin.trigger, '')
-                    .replace(/^ /, '')
+    if (!isAllowed(roles, name)) {
+        info(
+'The preceding command was ignored due to insufficient permissions.'
+        )
+        return
+    }
 
-                argsObject.plugin = plugin
-                runCommand(argsObject)
-                break
-            }
-        } else if (plugin.trigger instanceof RegExp) {
-            argsObject.action = plugin.action
-            argsObject.args = plugin.trigger.exec(command)
-            argsObject.plugin = plugin
+    try {
+        const args = await parseArguments(
+            argsString,
+            plugin._usage,
+            message,
+        )
 
-            if (argsObject.args !== null) {
-                runCommand(argsObject)
-                break
-            }
+        if (args === null) {
+            message.reply(bot.formatUsage(plugin))
+            return
         }
+
+        await plugin.run(args, message, bot, plugin)
+    } catch (error) {
+        console.error(error)
+        await message.reply(
+'An unhandled exception was encountered while running that command. A stack trace has been printed to the attached terminal for a maintainer to see.'
+        )
     }
 
     checkFatal()
@@ -167,17 +154,32 @@ void (async () => {
     console.group('Loading plugins...')
     const pluginFileNames = await readdir(pluginDirectoryName)
     const intentsSet = new Set(['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES'])
-    const plugins = bot.plugins = []
+    const plugins = bot.plugins = new Map
 
     for (const pluginFileName of pluginFileNames) {
         console.group(pluginFileName)
         const plugin = require(`${pluginDirectoryName}/${pluginFileName}`)
         plugin.fileName = pluginFileName
-        plugins.push(plugin)
+        plugins.set(plugin.name, plugin)
 
         if (plugin.intents !== undefined) {
             for (const intent of plugin.intents) {
                 intentsSet.add(intent)
+            }
+        }
+
+        if (plugin.usage !== undefined) {
+            const usage = Array.isArray(plugin.usage) ? plugin.usage
+                        : /* otherwise */               [plugin.usage]
+
+            try {
+                plugin._usage = usage.map(parseUsage)
+            } catch (error) {
+                if (error instanceof UsageSyntaxError) {
+                    fatal(`Syntax error in usage: ${error.message}`)
+                } else {
+                    throw error
+                }
             }
         }
 
@@ -191,12 +193,6 @@ void (async () => {
     console.groupEnd()
     await saveMainConfig()
     checkFatal()
-
-    // Sort plugins lexicographically by name.
-    plugins.sort((pluginA, pluginB) =>
-        pluginA.name < pluginB.name ? -1 :
-        pluginB.name > pluginB.name ?  1 :
-                                       0)
 
     // Connect to Discord.
     info('Connecting...')
