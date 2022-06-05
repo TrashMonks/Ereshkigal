@@ -47,6 +47,13 @@ const parsers = {
     },
 }
 
+parsers.integer.prettyName = 'an integer'
+parsers.wholeNumber.prettyName = 'a whole number (0 or more)'
+parsers.string.prettyName = 'some text without spaces'
+parsers.channel.prettyName = 'a channel'
+parsers.member.prettyName = 'a member of the server'
+parsers.message.prettyName = 'a message'
+
 // Parse a usage string into an array of objects describing arguments,
 // according to the following grammar, starting at Usage:
 // Usage        → Arguments?

@@ -1,7 +1,7 @@
 'use strict'
 
 const {readdir} = require('fs/promises')
-const {Client, Intents} = require('discord.js')
+const {Client} = require('discord.js')
 const {parseUsage, parseArguments, UsageSyntaxError} = require('./arguments')
 const {loadConfig, saveConfig} = require('./config')
 const {info, fatal, checkFatal} = require('./log')
@@ -27,26 +27,50 @@ const saveMainConfig = async () => {
     })
 }
 
+const prettyUsage = (prefix, name, usage) => {
+    const argStrings = []
+    const typeExplanations = []
+
+    for (const arg of usage) {
+        if (arg.type === 'rest') {
+            argStrings.push(`<${arg.name}>`)
+            typeExplanations.push(`${arg.name} is some text`)
+        } else {
+            argStrings.push(`<${arg.name}>`)
+            typeExplanations.push(`${arg.name} is ${arg.type.prettyName}`)
+        }
+    }
+
+    let result = `\`${prefix}${name}`
+
+    if (argStrings.length !== 0) {
+        result += ' ' + argStrings.join(' ')
+    }
+
+    result += '`'
+
+    if (typeExplanations.length !== 0) {
+        result += `\n    where ${typeExplanations.join(', ')}`
+    }
+
+    return result
+}
+
 const bot = {
     formatUsage: (plugin) => {
-        let usage
+        let usages = plugin._usage
 
-        switch (typeof plugin.usage) {
-            case 'undefined':
-                return 'There is no usage for this plugin.'
-            case 'string':
-                usage = [plugin.usage]
-                break
-            default:
-                usage = plugin.usage
-                break
+        if (usages === undefined) {
+            return '(There is no command associated with this plugin.)'
         }
 
-        usage = usage.map((usageLine) =>
-            '    ' + bot.config.commandPrefix + plugin.name + ' ' + usageLine
-        )
+        usages = usages.map((usage) => {
+            const result =
+                prettyUsage(bot.config.commandPrefix, plugin.name, usage)
+            return result.split('\n').map((line) => '    ' + line).join('\n')
+        })
 
-        return `Usage:\n${usage.join('\n')}`
+        return `Usage:\n${usages.join('\n')}`
     },
 }
 
@@ -54,7 +78,6 @@ const onReady = async (client) => {
     const guildsCache = client.guilds.cache
 
     if (guildsCache.size !== 1) {
-        console.log(guildsCache)
         fatal('Must be in exactly one guild.', true)
     }
 
