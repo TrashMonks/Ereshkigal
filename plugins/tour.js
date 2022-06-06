@@ -47,23 +47,24 @@ const initialize = ({config}) => {
 }
 
 const ready = ({client}) => {
-    client.on('guildMemberUpdate', async (oldData, newData) => {
+    client.on('guildMemberUpdate', async (oldMember, member) => {
         if (
-            !oldData.roles.cache.has(approvedRoleId) &&
-            newData.roles.cache.has(approvedRoleId)
+            !oldMember.roles.cache.has(approvedRoleId) &&
+            member.roles.cache.has(approvedRoleId)
         ) {
             // The user has been approved for membership.
             const approvalChannel =
             await client.channels.resolve(approvalChannelId)
             await approvalChannel.send(
-`✅${newData} has been approved for entry.`
+`✅${member} has been approved for entry.`
             )
         } else if (
-            !oldData.roles.cache.has(deniedRoleId) &&
-            newData.roles.cache.has(deniedRoleId)
+            !oldMember.roles.cache.has(deniedRoleId) &&
+            member.roles.cache.has(deniedRoleId)
         ) {
             // The user has been denied for membership.
-            // TODO
+            // TODO: Send a DM?
+            await member.kick('Entry application denied.')
         }
     })
 }
@@ -119,7 +120,7 @@ module.exports = {
     description:
 `This plugin is responsible for four different related functions:
 - When an applicant is approved for server entry, it sends notice of this to a channel.
-- When an applicant is denied, it bans them.
+- When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - The \`tour next\` subcommand lists who is up next for touring. It lists up to ten users, preferring half of them to be patrons if able.
 - The \`tour done\` subcommand grants full entry to the server.`,
     initialize,
