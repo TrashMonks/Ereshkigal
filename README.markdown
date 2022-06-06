@@ -62,7 +62,7 @@ The contents of the arrays seen in this snippet are strings containg Discord rol
         "onboarder": ["…"]
     }
 
-Where the `…`s must be replaced by *distinct* Discord role IDs.
+Where the `…`s must be replaced by Discord role IDs.
 
 Discord roles that share the same role group are treated identically to each other by the bot for purposes of running commands.
 
@@ -122,7 +122,7 @@ Putting the information from the preceding sections together, here is the final 
         ]
     }
 
-Where the only remaining `…`s must be replaced with *distinct* role IDs.
+Where the only remaining `…`s must be replaced with role IDs.
 
 This example describes a setup where two roles are considered staff, who may execute all commands, and one role is considered onboarder, who may execute just the `airlockcount` and `vettinglimit` commands.
 
