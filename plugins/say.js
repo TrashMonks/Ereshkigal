@@ -1,10 +1,10 @@
 module.exports = {
     name: 'say',
     usage: '...content',
-    synopsis: 'Post some specified text.',
+    synopsis: 'Speak as the bot.',
     description:
-`Anything after the command word (minus the first space) is interpreted as the content of a message to be posted by the bot. The bot posts the message (as a non-reply) in the same channel as the command was invoked and then deletes the message that triggered the command.
-**Note:** The resulting message cannot be the full size of the Discord message limit because of the leading characters in the command string.`,
+`Post the given content in the same channel as the command was run and then delete the command message.
+**Note:** The resulting message cannot be the full size of the Discord message limit because of the leading characters in the command message.`,
     async run({content}, message) {
         await message.channel.send(content)
         await message.delete()
