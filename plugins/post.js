@@ -1,17 +1,17 @@
 const fetch = require('../fetch')
 
 module.exports = {
-    name: 'edit',
+    name: 'post',
     usage: [
-        'messageToEdit:message',
-        'messageToEdit:message ...newContent'
+        'channel:channel',
+        'channel:channel ...content',
     ],
-    synopsis: 'Edit a bot messsage.',
+    synopsis: 'Send a message.',
     description:
-`Given a message that was originally posted by the bot, the bot replaces its contents with the specified text.
+`Post the given content in the given channel.
 If the content isn't specified as part of the command text, it's taken from an attachment instead. Make sure there is exactly one attachment and that it's a text file.`,
-    async run({messageToEdit, newContent}, message) {
-        if (newContent === undefined) {
+    async run({channel, content}, message) {
+        if (content === undefined) {
             if (message.attachments.size !== 1) {
                 message.reply('Please attach precisely one attachment.')
                 return
@@ -23,10 +23,10 @@ If the content isn't specified as part of the command text, it's taken from an a
             if (attachedContent.length > 2000) {
                 await message.reply('The attached content must not exceed the Discord message length limit of 2000 characters.')
             } else {
-                await messageToEdit.edit(attachedContent)
+                await channel.send(attachedContent)
             }
         } else {
-            await messageToEdit.edit(newContent)
+            await channel.send(content)
         }
     },
 }
