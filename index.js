@@ -58,6 +58,15 @@ const prettyUsage = (prefix, name, usage) => {
     return result
 }
 
+const checkGuildAgainstConfiguration = (guild) => {
+    if (guild.id !== bot.config.guildId) {
+        console.warn(
+`Leaving guild ${guild.name} (${guild.id}) because it does not match the configured guild ID (${bot.config.guildId}).`
+        )
+        guild.leave()
+    }
+}
+
 const bot = {
     formatUsage: (plugin) => {
         let usages = plugin._usage
@@ -77,13 +86,17 @@ const bot = {
 }
 
 const onReady = async (client) => {
-    const guildsCache = client.guilds.cache
+    // Make sure the configured guild ID is reasonable before doing anything
+    // destructive.
+    const guild = await client.guilds.fetch(bot.config.guildId)
 
-    if (guildsCache.size !== 1) {
-        fatal('Must be in exactly one guild.', true)
+    // Leave all the "wrong" guilds.
+    for (const [_, guild] of client.guilds.cache) {
+        checkGuildAgainstConfiguration(guild)
     }
 
-    await guildsCache.first().members.fetch()
+    // Cache all members so that the bot will see changes in them.
+    await guild.members.fetch()
 
     for (const [_, plugin] of bot.plugins) {
         if (plugin.ready !== undefined) {
@@ -91,10 +104,7 @@ const onReady = async (client) => {
         }
     }
 
-    client.on('guildCreate', () =>
-        fatal('Must be in exactly one guild.', true)
-    )
-
+    client.on('guildCreate', checkGuildAgainstConfiguration)
     client.on('messageCreate', onMessageCreate)
     info('Done.')
 }
@@ -164,6 +174,12 @@ void (async () => {
     if (config.token == null) {
         fatal(
 'Please provide a bot token by editing the "token" field in config.json. This is required so the bot can authenticate with Discord.'
+        )
+    }
+
+    if (config.guildId == null) {
+        fatal(
+'Please provide a guild ID by editing the "guildId" field in config.json. This is required because the bot is designed to work with only one guild.'
         )
     }
 

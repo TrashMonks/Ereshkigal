@@ -68,6 +68,9 @@ channel.'
         })
 
         client.on('guildMemberRemove', (member) => {
+            // Don't announce the bot's own leaving from a guild.
+            if (member.user.id === client.user.id) { return }
+
             logChannel.send({
                 content:
 `${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server :<`,
