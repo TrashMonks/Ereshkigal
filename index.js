@@ -231,9 +231,9 @@ void (async () => {
         // Replying to a non-existent message creates a non-reply instead.
         failIfNotExists: false,
 
-        // Don't mention the user we're replying to.
+        // Turn off mentions by default.
         allowedMentions: {
-            parse: ['roles', 'users'],
+            parse: [],
             repliedUser: false,
         },
     })

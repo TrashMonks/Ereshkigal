@@ -2,11 +2,13 @@ const {fatal} = require('../log')
 let logChannelId
 let logChannel
 
+const allowedMentions = {parse: ['users']}
+
 module.exports = {
     name: 'join-leave',
     synopsis: 'Log when users join or leave the server.',
     description:
-'Whenever a user joins or leaves the server, the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who joined or left, including a (silent) mention.',
+'Whenever a user joins or leaves the server, the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who joined or left, including a mention.',
     intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
@@ -35,6 +37,7 @@ channel.'
 
             logChannel.send({
                 content: `${member} joined the server.`,
+                allowedMentions,
                 embeds: [{
                     author: {
                         name: user.username + '#' + user.discriminator,
@@ -68,6 +71,7 @@ channel.'
             logChannel.send({
                 content:
 `${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server :<`,
+                allowedMentions,
             })
         })
     },
