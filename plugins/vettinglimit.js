@@ -44,6 +44,15 @@ Invoking with \`force_reset\` makes the bot forget the state that onboarding was
         }
     },
 
+    ready({client}) {
+        client.on('messageDelete', (message) => {
+            if (isActive() && message.id === onboarding.panel.id) {
+                onboarding.channel.send('The panel has been deleted. Shutting down onboarding.')
+                onboarding = null
+            }
+        })
+    },
+
     async run({ticketLimit, cancel, force_reset}, message, bot) {
         if (ticketLimit === undefined && cancel === undefined && force_reset === undefined) {
             // No arguments; report status.
@@ -69,11 +78,7 @@ Invoking with \`force_reset\` makes the bot forget the state that onboarding was
                     await message.reply('Okay, the limit has been canceled.')
                 } else {
                     await onboarding.panel.delete()
-                    await message.reply(
-'Okay, the limit has been canceled and the panel deleted.'
-                    )
                 }
-                onboarding = null
             }
             return
         }
@@ -96,6 +101,7 @@ Invoking with \`force_reset\` makes the bot forget the state that onboarding was
         onboarding = {
             current: 0,
             limit: ticketLimit,
+            channel: message.channel,
             panel: null,
         }
 
@@ -154,11 +160,5 @@ Invoking with \`force_reset\` makes the bot forget the state that onboarding was
         }
 
         await onboarding.panel.delete()
-        await message.reply(
-`The limit of ${onboarding.limit} has been reached and the panel has been deleted.`
-        )
-
-        // Enter an inactive state.
-        onboarding = null
     },
 }
