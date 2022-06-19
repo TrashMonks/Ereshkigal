@@ -17,13 +17,15 @@ module.exports = {
         '',
         'ticketLimit:wholeNumber',
         '"cancel"',
+        '"force_reset"',
     ],
     synopsis:
 'Limit the number of tickets that can be opened during the next round of onboarding.',
     description:
 `Invoking without arguments reports the current onboarding status.
 Invoking with a number either starts onboarding (if it was inactive) or changes the active ticket limit (if it was active).
-Invoking with \`cancel\` removes the ticket limit and deletes the panel, if there is one.`,
+Invoking with \`cancel\` removes the ticket limit and deletes the panel, if there is one.
+Invoking with \`force_reset\` makes the bot forget the state that onboarding was in and return to inactive. **If a panel was already posted, the bot will not remove it.** This should rarely be necessary.`,
     initialize(bot) {
         ({panelChannelId, panelPosterId, onboardingCategoryIds} =
             bot.config.onboarding ?? {})
@@ -42,8 +44,8 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
         }
     },
 
-    async run({ticketLimit, cancel}, message, bot) {
-        if (ticketLimit === undefined && cancel === undefined) {
+    async run({ticketLimit, cancel, force_reset}, message, bot) {
+        if (ticketLimit === undefined && cancel === undefined && force_reset === undefined) {
             // No arguments; report status.
             if (isInactive()) {
                 await message.reply(
@@ -73,6 +75,12 @@ Invoking with \`cancel\` removes the ticket limit and deletes the panel, if ther
                 }
                 onboarding = null
             }
+            return
+        }
+
+        if (force_reset) {
+            onboarding = null
+            await message.reply('Okay, I have forgotten the previous onboarding state.')
             return
         }
 
