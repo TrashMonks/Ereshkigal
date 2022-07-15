@@ -5,6 +5,7 @@ let approvedRoleId
 let deniedRoleId
 let memberRoleId
 let patronRoleIds
+let onboardingCategoryIds
 
 const initialize = ({config}) => {
     ({
@@ -13,6 +14,7 @@ const initialize = ({config}) => {
         deniedRoleId,
         memberRoleId,
         patronRoleIds,
+        onboardingCategoryIds,
     } = config?.onboarding ?? {})
 
     if (approvalChannelId === undefined) {
@@ -44,6 +46,12 @@ const initialize = ({config}) => {
 `Please list out patron roles by editing the "patronRoleIds" field under "onboarding".`
         )
     }
+
+    if (onboardingCategoryIds === undefined) {
+        fatal(
+`Please list out onboarding categories by editing the "onboardingCategoryIds" field under "onboarding".`
+        )
+    }
 }
 
 const ready = ({client}) => {
@@ -63,7 +71,6 @@ const ready = ({client}) => {
             member.roles.cache.has(deniedRoleId)
         ) {
             // The user has been denied for membership.
-            // TODO: Send a DM?
             await member.kick('Entry application denied.')
         }
     })
@@ -77,18 +84,33 @@ const byJoinDate = (memberA, memberB) =>
 
 const run = async ({next, done, member}, message) => {
     if (next) {
-        const approvedRole = await message.guild.roles.fetch(approvedRoleId)
+        const guild = message.guild
+        const approvedRole = await guild.roles.fetch(approvedRoleId)
+        const onboardingCategories = await Promise.all(
+            onboardingCategoryIds.map((id) => guild.channels.resolve(id))
+        )
+        const ticketChannels = onboardingCategories.flatMap((category) => {
+            return Array.from(category.children.values())
+        })
+        console.log(ticketChannels)
+
+        // Filter out any users who can view a channel in the onboarding
+        // category; this presumably means they are already being onboarded.
+        const toBeToured = approvedRole.members.filter((member) =>
+            !ticketChannels.some((channel) =>
+                channel.permissionsFor(member).has('VIEW_CHANNEL')
+        ))
 
         // Select up to ten users from the full list. Try to select up to five
         // patrons first, then pad out the rest with either patrons or
         // non-patrons.
 
         const nextPatrons = Array.from(
-            approvedRole.members.filter(isPatron).values()
+            toBeToured.filter(isPatron).values()
         ).sort(byJoinDate).slice(0, 5)
 
         const next = nextPatrons.concat(
-            Array.from(approvedRole.members.filter(
+            Array.from(toBeToured.filter(
                 (member) => !isPatron(member) && !nextPatrons.includes(member)
             ).values()).sort(byJoinDate).slice(0, 10 - nextPatrons.length)
         )
