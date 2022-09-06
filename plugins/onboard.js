@@ -1,3 +1,4 @@
+const {setTimeout} = require('timers/promises')
 const {Collection, DiscordAPIError} = require('discord.js')
 const {fatal} = require('../log')
 
@@ -81,6 +82,7 @@ const ready = ({client}) => {
         ) {
             // The user has been denied for membership.
             if (member.kickable) {
+                await setTimeout(1000)
                 await member.kick('Entry application denied.')
             }
         }
