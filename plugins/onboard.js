@@ -199,8 +199,9 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
               : /* otherwise */       ''
             const applicationUrl =
                 applicants.get(applicant)?.url ?? 'Somehow has no application.'
+            const time = Math.floor(applicant.joinedTimestamp / 1000)
             replyLines.push(
-`<@${applicant.id}>${patronText}: ${applicationUrl}`
+`<@${applicant.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
             )
             count = (count + 1) % MAX_APPLICANTS_PER_MESSAGE
             if (count === 0) {
