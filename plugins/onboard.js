@@ -103,36 +103,55 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
             const application =
                 await applicationChannel.messages.fetch(applicationId)
             const embed = application.embeds[0]
-            // If there is no embed, it's not what we're looking for.
-            if (embed === undefined) { continue }
 
-            // This relies on the field containing the user's id having a
-            // specific name. It could be un-hardcoded to some degree, but it
-            // wouldn't help much since either way we're relying on an
-            // unspecified observable feature of the applications. If something
-            // suddenly and mysteriously breaks in the future, you know where
-            // to look.
-            const statsField = embed.fields.find(
-                (field) => field.name === 'Application stats'
-            ).value
+            // The logic to identify the user of each application relies on
+            // unspecified observable features of the messages that the
+            // application bot sends to represent the applications. If
+            // something suddenly and mysteriously breaks in the future, you
+            // know where to look first.
 
-            // Parse the applicant's user ID out of the field value.
-            const match = /\*\*(?<id>\d+)\*\*/.exec(statsField)
-            // Nothing to do if we didn't find the right text.
-            if (match === null) { continue }
-
-            const applicantId = match.groups.id
-
-            // Check that they exist and are on the server.
             let applicant
-            try {
-                applicant = await guild.members.fetch(applicantId)
-            // Fetching a user who's not on the server gives an API error.
-            } catch (error) {
-                if (error instanceof DiscordAPIError) {
-                    continue
-                } else {
-                    throw error
+            // If there is no embed, it might be using the layout that allows
+            // longer fields. The user ID doesn't appear at all there, but
+            // at least the username#discriminator does.
+            if (embed === undefined) {
+                const match = /\*\*(?<username>.*)\#(?<discriminator>.*)'s application/.exec(application.content)
+                if (match === null) { continue }
+                const username = match.groups.username
+                const discriminator = match.groups.discriminator
+                applicant = guild.members.cache.filter((member) => {
+                    const user = member.user
+                    return user.username === username
+                        && user.discriminator === discriminator
+                }).first()
+                if (applicant === undefined) { continue }
+            // There is an embed, so let's find the field that has the user ID.
+            } else {
+                // This relies on the field containing the user's id having a
+                // specific name. It could be un-hardcoded to some degree, but
+                // it wouldn't help much since either way as mentioned above we
+                // have to rely on something unspecified.
+                const statsField = embed.fields.find(
+                    (field) => field.name === 'Application stats'
+                ).value
+
+                // Parse the applicant's user ID out of the field value.
+                const match = /\*\*(?<id>\d+)\*\*/.exec(statsField)
+                // Nothing to do if we didn't find the right text.
+                if (match === null) { continue }
+
+                const applicantId = match.groups.id
+
+                // Check that they exist and are on the server.
+                try {
+                    applicant = await guild.members.fetch(applicantId)
+                // Fetching a user who's not on the server gives an API error.
+                } catch (error) {
+                    if (error instanceof DiscordAPIError) {
+                        continue
+                    } else {
+                        throw error
+                    }
                 }
             }
 
