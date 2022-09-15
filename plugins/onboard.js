@@ -214,7 +214,7 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
         let replyLines = []
         let count = 0
         let hasOutputAlready = false
-        const MAX_APPLICANTS_PER_MESSAGE = 1
+        const MAX_APPLICANTS_PER_MESSAGE = 10
         for (const applicant of selectedApplicants) {
             const patronText =
                 isPatron(applicant) ? ' (Patron)'
