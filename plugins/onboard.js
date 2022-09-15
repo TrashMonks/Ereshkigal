@@ -244,7 +244,11 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
     } else if (admit) {
         await member.roles.remove(approvedRoleId)
         await member.roles.add(memberRoleId)
-        await message.reply(`${member} has been granted access to the server.`)
+        const content = `🌈${member} has been granted access to the server.`
+        await message.reply(content)
+        const approvalChannel =
+            await message.guild.channels.resolve(approvalChannelId)
+        await approvalChannel.send(content)
     } else {
         await message.reply('Hmm, this message was supposed to be impossible.')
     }
