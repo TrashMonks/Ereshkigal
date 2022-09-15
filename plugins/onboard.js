@@ -10,6 +10,8 @@ let memberRoleId
 let patronRoleIds
 let onboardingCategoryIds
 
+const allowedMentions = {parse: ['users']}
+
 const initialize = ({config}) => {
     ({
         applicationChannelId,
@@ -224,13 +226,16 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
             )
             count = (count + 1) % MAX_APPLICANTS_PER_MESSAGE
             if (count === 0) {
-                message.reply(replyLines.join('\n'))
+                message.reply({
+                    content: replyLines.join('\n'),
+                    allowedMentions,
+                })
                 replyLines.length = 0
             }
         }
 
         if (replyLines.length !== 0) {
-            message.reply(replyLines.join('\n'))
+            message.reply({content: replyLines.join('\n'), allowedMentions})
         } else if (review) {
             message.reply('No one is awaiting review.')
         } else if (ticket) {
