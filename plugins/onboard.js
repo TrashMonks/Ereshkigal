@@ -213,7 +213,8 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
 
         let replyLines = []
         let count = 0
-        const MAX_APPLICANTS_PER_MESSAGE = 10
+        let hasOutputAlready = false
+        const MAX_APPLICANTS_PER_MESSAGE = 1
         for (const applicant of selectedApplicants) {
             const patronText =
                 isPatron(applicant) ? ' (Patron)'
@@ -231,11 +232,14 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
                     allowedMentions,
                 })
                 replyLines.length = 0
+                hasOutputAlready = true
             }
         }
 
         if (replyLines.length !== 0) {
             message.reply({content: replyLines.join('\n'), allowedMentions})
+        } else if (hasOutputAlready) {
+            // Do nothing. We've already listed some applicants.
         } else if (review) {
             message.reply('No one is awaiting review.')
         } else if (ticket) {
