@@ -1,12 +1,20 @@
 const fetch = require('../fetch')
 
+const allowedMentions = {parse: []}
+
 const run = async ({channel, content, messageToCopy}, message) => {
     // Content is from another message.
     if (messageToCopy !== undefined) {
-        await channel.send(messageToCopy.content)
+        await channel.send({
+            content: messageToCopy.content,
+            allowedMentions,
+        })
     // Content is from the command message.
     } else if (content !== undefined) {
-        await channel.send(content)
+        await channel.send({
+            content,
+            allowedMentions,
+        })
     // Content is from an attachment.
     } else {
         if (message.attachments.size !== 1) {
@@ -20,7 +28,10 @@ const run = async ({channel, content, messageToCopy}, message) => {
         if (attachedContent.length > 2000) {
             await message.reply('The attached content must not exceed the Discord message length limit of 2000 characters.')
         } else {
-            await channel.send(attachedContent)
+            await channel.send({
+                content: attachedContent,
+                allowedMentions,
+            })
         }
     }
 }

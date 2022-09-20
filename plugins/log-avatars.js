@@ -2,8 +2,6 @@ const {fatal} = require('../log')
 let logChannelId
 let logChannel
 
-const allowedMentions = {parse: ['users']}
-
 module.exports = {
     name: 'log-avatars',
     synopsis: 'Log when airlock users change their avatars.',
@@ -53,7 +51,6 @@ module.exports = {
             if (oldAvatar !== newAvatar) {
                 logChannel.send({
                     content: `${newUser} changed avatar.`,
-                    allowedMentions,
                     embeds: [
                         {
                             author: {

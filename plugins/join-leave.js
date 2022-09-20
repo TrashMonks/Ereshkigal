@@ -2,8 +2,6 @@ const {fatal} = require('../log')
 let logChannelId
 let logChannel
 
-const allowedMentions = {parse: ['users']}
-
 module.exports = {
     name: 'join-leave',
     synopsis: 'Log when users join or leave the server.',
@@ -37,7 +35,6 @@ channel.'
 
             logChannel.send({
                 content: `${member} joined the server.`,
-                allowedMentions,
                 embeds: [{
                     author: {
                         name: user.username + '#' + user.discriminator,
@@ -71,11 +68,9 @@ channel.'
             // Don't announce the bot's own leaving from a guild.
             if (member.user.id === client.user.id) { return }
 
-            logChannel.send({
-                content:
-`${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server :<`,
-                allowedMentions,
-            })
+            logChannel.send(
+`${member} (${member.displayName} / ${member.user.username}#${member.user.discriminator}) left the server :<`
+            )
         })
     },
 }

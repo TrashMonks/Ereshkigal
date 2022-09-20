@@ -10,8 +10,6 @@ let memberRoleId
 let patronRoleIds
 let onboardingCategoryIds
 
-const allowedMentions = {parse: ['users']}
-
 const initialize = ({config}) => {
     ({
         applicationChannelId,
@@ -227,17 +225,14 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
             )
             count = (count + 1) % MAX_APPLICANTS_PER_MESSAGE
             if (count === 0) {
-                message.reply({
-                    content: replyLines.join('\n'),
-                    allowedMentions,
-                })
+                message.reply(replyLines.join('\n'))
                 replyLines.length = 0
                 hasOutputAlready = true
             }
         }
 
         if (replyLines.length !== 0) {
-            message.reply({content: replyLines.join('\n'), allowedMentions})
+            message.reply(replyLines.join('\n'))
         } else if (hasOutputAlready) {
             // Do nothing. We've already listed some applicants.
         } else if (review) {

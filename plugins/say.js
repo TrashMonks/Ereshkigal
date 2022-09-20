@@ -7,7 +7,10 @@ module.exports = {
 **Note:** The resulting message cannot be the full size of the Discord message limit because of the leading characters in the command message.
 **Note:** Although the bot itself doesn't ping any users mentioned in the command output, you will still end up pinging them in the message to run the command. See \`post\` for an alternative.`,
     async run({content}, message) {
-        await message.channel.send(content)
+        await message.channel.send({
+            content,
+            allowedMentions: {parse: []},
+        })
         await message.delete()
     },
 }
