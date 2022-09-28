@@ -48,6 +48,13 @@ const parsers = {
             return await channel.messages.fetch(messageId)
         }
     },
+
+    async user(string, message) {
+        const match = /^<@(?<userId>\d+)>$/.exec(string)
+        const userId = match === null  ? string
+                     : /* otherwise */   match.groups.userId
+        return await message.client.users.fetch(userId)
+    },
 }
 
 parsers.integer.prettyName = 'an integer'
@@ -56,6 +63,7 @@ parsers.string.prettyName = 'some text without spaces'
 parsers.channel.prettyName = 'a channel'
 parsers.member.prettyName = 'a member of the server'
 parsers.message.prettyName = 'a message'
+parsers.user.prettyName = 'a user (not necessarily on the server)'
 
 // Parse a usage string into an array of objects describing arguments,
 // according to the following grammar, starting at Usage:
