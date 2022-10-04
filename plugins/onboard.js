@@ -2,24 +2,37 @@ const {setTimeout} = require('timers/promises')
 const {Collection, DiscordAPIError} = require('discord.js')
 const {fatal} = require('../log')
 
+let onboardingCategoryIds
 let applicationChannelId
 let approvalChannelId
+let airlockRoleIds
 let approvedRoleId
 let deniedRoleId
 let memberRoleId
 let patronRoleIds
-let onboardingCategoryIds
+
+// A mapping from Discord user IDs onto message objects. This is updated
+// immediately after connecting to the Discord API and then continuously as new
+// messages come in in the application channel.
+const userApplications = new Map
 
 const initialize = ({config}) => {
     ({
+        onboardingCategoryIds,
         applicationChannelId,
         approvalChannelId,
+        airlockRoleIds,
         approvedRoleId,
         deniedRoleId,
         memberRoleId,
         patronRoleIds,
-        onboardingCategoryIds,
     } = config?.onboarding ?? {})
+
+    if (onboardingCategoryIds === undefined) {
+        fatal(
+`Please list out onboarding categories by editing the "onboardingCategoryIds" field under "onboarding".`
+        )
+    }
 
     if (applicationChannelId === undefined) {
         fatal(
@@ -30,6 +43,12 @@ const initialize = ({config}) => {
     if (approvalChannelId === undefined) {
         fatal(
 `Please specify an approval logging channel by editing the "approvalChannelId" field under "onboarding".`
+        )
+    }
+
+    if (airlockRoleIds === undefined) {
+        fatal(
+`Please list out airlock roles by editing the "airlockRoleIds" field under "onboarding".`
         )
     }
 
@@ -56,15 +75,9 @@ const initialize = ({config}) => {
 `Please list out patron roles by editing the "patronRoleIds" field under "onboarding".`
         )
     }
-
-    if (onboardingCategoryIds === undefined) {
-        fatal(
-`Please list out onboarding categories by editing the "onboardingCategoryIds" field under "onboarding".`
-        )
-    }
 }
 
-const ready = ({client}) => {
+const ready = async ({client, guild}) => {
     client.on('guildMemberUpdate', async (oldMember, member) => {
         if (
             !oldMember.roles.cache.has(approvedRoleId) &&
@@ -87,124 +100,123 @@ const ready = ({client}) => {
             }
         }
     })
+
+    // Cache all applications on startup and as they come in.
+    const applicationChannel = await guild.channels.fetch(applicationChannelId)
+    for (const [messageId] of await fetchAllMessages(applicationChannel)) {
+        processApplicationMessage(
+            await applicationChannel.messages.fetch(messageId)
+        )
+    }
+    client.on('messageCreate', (message) => {
+        if (message.channel.id === applicationChannel.id) {
+            processApplicationMessage(message)
+        }
+    })
+}
+
+const processApplicationMessage = (message) => {
+    const userId = computeUserIdFromMessage(message)
+    if (userId === null) { return }
+
+    // Consider only the latest application from any applicant.
+    const existingApplication = userApplications.get(userId)
+    if (
+        existingApplication === undefined ||
+        existingApplication.createdTimestamp < message.createdTimestamp
+    ) {
+        userApplications.set(userId, message)
+    }
+}
+
+const computeUserIdFromMessage = (message) => {
+    // NOTE: The logic to identify the user of each application relies on
+    // unspecified observable features of the messages that the application bot
+    // sends to represent the applications. If something suddenly and
+    // mysteriously breaks in the future, you know where to look first.
+
+    // A message in the application channel can be one of the following:
+    // - an application with an embed
+    // - an application without an embed
+    // - not an application
+
+    // We'll distinguish non-applications, or applications in an unknown format
+    // (which are functionally the same thing) based on the presence or absence
+    // of certain features assumed to be present on applications.
+
+    // To determine which it is, first we need to know if there's an embed.
+    const embed = message.embeds[0]
+
+    // If there's no embed, it could be because the fields were too long for
+    // the application bot to use an embed, so it's an attachment instead. The
+    // user ID doesn't appear on this kind, but at least the username and
+    // discriminator combo do, so we can still find the user.
+    if (embed === undefined) {
+        const usernamePattern =
+/\*\*(?<username>.*)\#(?<discriminator>.*)'s application/
+        const match = usernamePattern.exec(message.content)
+        if (match === null) { return null }
+        const username = match.groups.username
+        const discriminator = match.groups.discriminator
+
+        // Check the username-discriminator combo against all cached users.
+        return message.guild.members.cache.filter((member) => {
+            const user = member.user
+            return user.username === username
+                && user.discriminator === discriminator
+        })?.first()?.id ?? null
+
+    // If there's an embed, the user ID should show up in one of the fields.
+    } else {
+        // The field is named "Application stats". It must be an exact match!
+        const statsField = embed.fields.find(
+            (field) => field.name === 'Application stats'
+        ).value
+
+        // Parse the applicant's user ID out of the field value.
+        const match = /\*\*(?<id>\d+)\*\*/.exec(statsField)
+
+        return match?.groups.id ?? null
+    }
 }
 
 const run = async ({review, ticket, amount, admit, member}, message) => {
-    if (review || ticket) {
-        const guild = message.guild
-        const applicationChannel = guild.channels.resolve(applicationChannelId)
-        message.reply('Fetching all applications. Please wait.')
-        const applications = await fetchAllMessages(applicationChannel)
+    const rolesToFetch = review          ? airlockRoleIds
+                       : ticket          ? [approvedRoleId]
+                       : /* otherwise */   null
+    const guild = message.guild
 
-        // The applicants map will associate each applicant with their latest
-        // application.
-        const applicants = new Map
-        for (const [applicationId] of applications) {
-            const application =
-                await applicationChannel.messages.fetch(applicationId)
-            const embed = application.embeds[0]
+    // We're listing out users in one of the queues.
+    if (rolesToFetch !== null) {
+        // Users are excluded from the listing if they're already in tickets,
+        // so first we retrieve all the ticket channels.
+        const ticketChannels = (await Promise.all(
+            onboardingCategoryIds.map((id) => guild.channels.fetch(id))
+        )).flatMap((category) => Array.from(category.children.values()))
 
-            // The logic to identify the user of each application relies on
-            // unspecified observable features of the messages that the
-            // application bot sends to represent the applications. If
-            // something suddenly and mysteriously breaks in the future, you
-            // know where to look first.
-
-            let applicant
-            // If there is no embed, it might be using the layout that allows
-            // longer fields. The user ID doesn't appear at all there, but
-            // at least the username#discriminator does.
-            if (embed === undefined) {
-                const match = /\*\*(?<username>.*)\#(?<discriminator>.*)'s application/.exec(application.content)
-                if (match === null) { continue }
-                const username = match.groups.username
-                const discriminator = match.groups.discriminator
-                applicant = guild.members.cache.filter((member) => {
-                    const user = member.user
-                    return user.username === username
-                        && user.discriminator === discriminator
-                }).first()
-                if (applicant === undefined) { continue }
-            // There is an embed, so let's find the field that has the user ID.
-            } else {
-                // This relies on the field containing the user's id having a
-                // specific name. It could be un-hardcoded to some degree, but
-                // it wouldn't help much since either way as mentioned above we
-                // have to rely on something unspecified.
-                const statsField = embed.fields.find(
-                    (field) => field.name === 'Application stats'
-                ).value
-
-                // Parse the applicant's user ID out of the field value.
-                const match = /\*\*(?<id>\d+)\*\*/.exec(statsField)
-                // Nothing to do if we didn't find the right text.
-                if (match === null) { continue }
-
-                const applicantId = match.groups.id
-
-                // Check that they exist and are on the server.
-                try {
-                    applicant = await guild.members.fetch(applicantId)
-                // Fetching a user who's not on the server gives an API error.
-                } catch (error) {
-                    if (error instanceof DiscordAPIError) {
-                        continue
-                    } else {
-                        throw error
-                    }
-                }
-            }
-
-            // Consider only the latest application from any applicant.
-            const existingApplication = applicants.get(applicant)
-            if (
-                existingApplication === undefined ||
-                existingApplication.createdTimestamp < application.createdTimestamp
-            ) {
-                applicants.set(applicant, application)
-            }
-        }
-
-        let applicantsOfInterest
-        if (review) {
-            // We are interested in those who have submitted applications and
-            // are not yet approved or denied.
-            applicantsOfInterest = Array.from(applicants.keys())
-                .filter(isAwaitingReview)
-        } else if (ticket) {
-            // First we need to find all the ticket channels because we need to
-            // not return applicants who are in a ticket. This presumably means
-            // they are already being onboarded.
-            const onboardingCategories = await Promise.all(
-                onboardingCategoryIds.map((id) => guild.channels.resolve(id))
-            )
-            const ticketChannels = onboardingCategories.flatMap((category) => {
-                return Array.from(category.children.values())
-            })
-
-            // We are interested in those who are approved and not in a ticket.
-            applicantsOfInterest = Array.from(applicants.keys())
-                .filter(isApproved)
-                .filter(isNotInTicket(ticketChannels))
-        }
-        // In case something weird happened, also ignore full members.
-        applicantsOfInterest = applicantsOfInterest.filter(isNotMember)
-
-        // Give priority to those who joined the server first (or, more
-        // accurately, whose latest join to the server was first).
-        applicantsOfInterest.sort(byJoinDate)
+        // Now we can retrieve all the users of the role we're asking for.
+        const applicants = (await Promise.all(
+            rolesToFetch.map((roleId) => guild.roles.fetch(roleId))
+        )).flatMap((role) => Array.from(role.members.values()))
+        // Normally, all users with these roles shouldn't be members, but in
+        // case something weird happens, go ahead and filter them out.
+        .filter(isNotMember)
+        // Exclude anyone in a ticket.
+        .filter(isNotInTicket(ticketChannels))
+        // Sort by how long they've been on the server.
+        .sort(byJoinDate)
 
         // Now select some number of applicants to present.
 
         // Give a certain amount of priority to patrons. Try to find patrons
         // for half of the requested applicants, rounded up.
         const patronAmount = Math.ceil(amount / 2)
-        const selectedPatrons = applicantsOfInterest
+        const selectedPatrons = applicants
             .filter(isPatron)
             .slice(0, patronAmount)
         // Pad out the rest with any applicants not already selected.
         const selectedApplicants = selectedPatrons.concat(
-            applicantsOfInterest.filter((applicant) =>
+            applicants.filter((applicant) =>
                 !selectedPatrons.includes(applicant)
             ).slice(0, amount - selectedPatrons.length)
         )
@@ -218,7 +230,7 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
                 isPatron(applicant) ? ' (Patron)'
               : /* otherwise */       ''
             const applicationUrl =
-                applicants.get(applicant)?.url ?? 'Somehow has no application.'
+            userApplications.get(applicant.id)?.url ?? 'Somehow has no application.'
             const time = Math.floor(applicant.joinedTimestamp / 1000)
             replyLines.push(
 `<@${applicant.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
@@ -240,14 +252,16 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
         } else if (ticket) {
             message.reply('No one is awaiting a ticket.')
         }
+    // We're permitting a user to enter.
     } else if (admit) {
         await member.roles.remove(approvedRoleId)
         await member.roles.add(memberRoleId)
         const content = `🌈${member} has been granted access to the server.`
         await message.reply(content)
         const approvalChannel =
-            await message.guild.channels.resolve(approvalChannelId)
+            await guild.channels.resolve(approvalChannelId)
         await approvalChannel.send(content)
+    // A fallback case in case of programming mistakes.
     } else {
         await message.reply('Hmm, this message was supposed to be impossible.')
     }
@@ -284,15 +298,6 @@ const fetchAllMessages = async (channel) => {
 // Does the given member lack the full member role?
 const isNotMember = (member) =>
     !member.roles.cache.has(memberRoleId)
-
-// Is the given member awaiting review? This means they don't have the
-// approved or denied roles.
-const isAwaitingReview = (member) =>
-    !member.roles.cache.has(approvedRoleId) &&
-    !member.roles.cache.has(deniedRoleId)
-
-const isApproved = (member) =>
-    member.roles.cache.has(approvedRoleId)
 
 // Is the given member not already in a ticket? This means they can see one of
 // the ticket channels.

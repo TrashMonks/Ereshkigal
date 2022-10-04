@@ -88,7 +88,7 @@ const bot = {
 const onReady = async (client) => {
     // Make sure the configured guild ID is reasonable before doing anything
     // destructive.
-    const guild = await client.guilds.fetch(bot.config.guildId)
+    const guild = bot.guild = await client.guilds.fetch(bot.config.guildId)
 
     // Leave all the "wrong" guilds.
     for (const [_, guild] of client.guilds.cache) {
