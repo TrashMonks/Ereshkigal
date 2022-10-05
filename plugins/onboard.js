@@ -204,16 +204,24 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
         )).flatMap((category) => Array.from(category.children.values()))
 
         // Now we can retrieve all the users of the role we're asking for.
-        const applicants = (await Promise.all(
+        let applicants = (await Promise.all(
             rolesToFetch.map((roleId) => guild.roles.fetch(roleId))
         )).flatMap((role) => Array.from(role.members.values()))
-        // Normally, all users with these roles shouldn't be members, but in
-        // case something weird happens, go ahead and filter them out.
-        .filter(isNotMember)
-        // Exclude anyone in a ticket.
-        .filter(isNotInTicket(ticketChannels))
-        // Sort by how long they've been on the server.
-        .sort(byJoinDate)
+
+        // When reviewing applications, the users in question must have
+        // submitted an application.
+        if (review) {
+            applicants = applicants.filter(hasApplication)
+        }
+
+        applicants = applicants
+            // Normally, all users with these roles shouldn't be members, but in
+            // case something weird happens, go ahead and filter them out.
+            .filter(isNotMember)
+            // Exclude anyone in a ticket.
+            .filter(isNotInTicket(ticketChannels))
+            // Sort by how long they've been on the server.
+            .sort(byJoinDate)
 
         // Now select some number of applicants to present.
 
@@ -239,7 +247,7 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
                 isPatron(applicant) ? ' (Patron)'
               : /* otherwise */       ''
             const applicationUrl =
-            userApplications.get(applicant.id)?.url ?? 'Somehow has no application.'
+            userApplications.get(applicant.id)?.url ?? 'No application found.'
             const time = Math.floor(applicant.joinedTimestamp / 1000)
             replyLines.push(
 `<@${applicant.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
@@ -303,6 +311,10 @@ const fetchAllMessages = async (channel) => {
 
     return messages
 }
+
+// Was an application found for the given member?
+const hasApplication = (member) =>
+    userApplications.has(member.id)
 
 // Does the given member lack the full member role?
 const isNotMember = (member) =>
