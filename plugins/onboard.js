@@ -137,7 +137,8 @@ const computeUserIdFromMessage = (message) => {
 
     // A message in the application channel can be one of the following:
     // - an application with an embed
-    // - an application without an embed
+    // - an unaccepted application without an embed
+    // - an accepted application without an embed
     // - not an application
 
     // We'll distinguish non-applications, or applications in an unknown format
@@ -152,12 +153,20 @@ const computeUserIdFromMessage = (message) => {
     // user ID doesn't appear on this kind, but at least the username and
     // discriminator combo do, so we can still find the user.
     if (embed === undefined) {
-        const usernamePattern =
+        const unacceptedPattern =
 /\*\*(?<username>.*)\#(?<discriminator>.*)'s application/
-        const match = usernamePattern.exec(message.content)
-        if (match === null) { return null }
-        const username = match.groups.username
-        const discriminator = match.groups.discriminator
+        const unacceptedMatch = unacceptedPattern.exec(message.content)
+
+        // If that didn't match, it's still possible it's an accepted app.
+        if (unacceptedMatch === null) {
+            const acceptedPattern = /<@(?<id>\d+)>'s application/
+            const acceptedMatch = acceptedPattern.exec(message.content)
+            if (acceptedMatch === null) { return null }
+            return acceptedMatch.groups.id
+        }
+
+        const username = unacceptedMatch.groups.username
+        const discriminator = unacceptedMatch.groups.discriminator
 
         // Check the username-discriminator combo against all cached users.
         return message.guild.members.cache.filter((member) => {
