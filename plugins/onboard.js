@@ -361,7 +361,7 @@ module.exports = {
     ],
     synopsis: 'Handle onboarding of new members.',
     description:
-`This plugin is responsible for five different related functions:
+`This plugin is responsible for several different related functions:
 - When an applicant is approved for server entry, it sends notice of this to a channel.
 - When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - The \`onboard review\` subcommand lists applications that have yet to be approved or denied. If able, it will ensure that at least half of them (rounded up) are patrons.
