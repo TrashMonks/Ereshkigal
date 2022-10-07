@@ -79,6 +79,9 @@ const initialize = ({config}) => {
 
 const ready = async ({client, guild}) => {
     client.on('guildMemberUpdate', async (oldMember, member) => {
+        // Ignore the addition of these roles to anyone already a member.
+        if (member.roles.cache.has(memberRoleId)) { return }
+
         if (
             !oldMember.roles.cache.has(approvedRoleId) &&
             member.roles.cache.has(approvedRoleId)
@@ -187,7 +190,7 @@ const computeUserIdFromMessage = (message) => {
     }
 }
 
-const run = async ({review, ticket, amount, admit, member}, message) => {
+const run = async ({review, ticket, amount, admit, deny, member}, message) => {
     const rolesToFetch = review          ? airlockRoleIds
                        : ticket          ? [approvedRoleId]
                        : /* otherwise */   null
@@ -268,6 +271,8 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
             message.reply('No one is awaiting a ticket.')
         }
     // We're permitting a user to enter.
+    } else if ((admit || deny) && member.roles.cache.has(memberRoleId)) {
+        await message.reply('I am unable to admit or deny someone who is a full member of the server.')
     } else if (admit) {
         await member.roles.remove(approvedRoleId)
         await member.roles.add(memberRoleId)
@@ -276,6 +281,10 @@ const run = async ({review, ticket, amount, admit, member}, message) => {
         const approvalChannel =
             await guild.channels.resolve(approvalChannelId)
         await approvalChannel.send(content)
+    // We're denying a user entry.
+    } else if (deny) {
+        await member.roles.add(deniedRoleId)
+        await message.reply(`⛔${member} has been denied entry.`)
     // A fallback case in case of programming mistakes.
     } else {
         await message.reply('Hmm, this message was supposed to be impossible.')
@@ -339,6 +348,7 @@ module.exports = {
         '"review" amount:wholeNumber',
         '"ticket" amount:wholeNumber',
         '"admit" member:member',
+        '"deny" member:member',
     ],
     synopsis: 'Handle onboarding of new members.',
     description:
@@ -347,7 +357,9 @@ module.exports = {
 - When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - The \`onboard review\` subcommand lists applications that have yet to be approved or denied. If able, it will ensure that at least half of them (rounded up) are patrons.
 - The \`onboard ticket\` subcommand lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
-- The \`onboard admit\` subcommand grants full entry to the server to the specified user.`,
+The following commands only work on users who are not full members.
+- The \`onboard admit\` subcommand grants full entry to the server to the specified user.
+- The \`onboard deny\` subcommand denies entry to the specified user, kicking them as mentioned above.`,
     initialize,
     ready,
     run,
