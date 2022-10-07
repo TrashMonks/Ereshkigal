@@ -366,6 +366,7 @@ module.exports = {
 - When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - The \`onboard review\` subcommand lists applications that have yet to be approved or denied. If able, it will ensure that at least half of them (rounded up) are patrons.
 - The \`onboard ticket\` subcommand lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
+- The \`onboard app\` subcommand retrieves the URL for the given user's application, if there is one.
 The following commands only work on users who are not full members.
 - The \`onboard admit\` subcommand grants full entry to the server to the specified user.
 - The \`onboard deny\` subcommand denies entry to the specified user, kicking them as mentioned above.`,
