@@ -102,17 +102,15 @@ const ready = async ({client, guild}) => {
     })
 
     // Cache all applications on startup and as they come in.
-    const applicationChannel = await guild.channels.fetch(applicationChannelId)
-    for (const [messageId] of await fetchAllMessages(applicationChannel)) {
-        processApplicationMessage(
-            await applicationChannel.messages.fetch(messageId)
-        )
-    }
     client.on('messageCreate', (message) => {
         if (message.channel.id === applicationChannel.id) {
             processApplicationMessage(message)
         }
     })
+    const applicationChannel = await guild.channels.fetch(applicationChannelId)
+    for (const [_, message] of await fetchAllMessages(applicationChannel)) {
+        processApplicationMessage(message)
+    }
 }
 
 const processApplicationMessage = (message) => {
@@ -299,8 +297,8 @@ const fetchAllMessages = async (channel) => {
 
         messages = messages.merge(
             nextMessages,
-            (_) => ({keep: true}),
-            (_) => ({keep: true}),
+            (value) => ({keep: true, value}),
+            (value) => ({keep: true, value}),
             (value, _) => ({keep: true, value}),
         )
 
