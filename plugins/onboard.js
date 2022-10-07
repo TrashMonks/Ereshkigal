@@ -190,7 +190,10 @@ const computeUserIdFromMessage = (message) => {
     }
 }
 
-const run = async ({review, ticket, amount, admit, deny, member}, message) => {
+const run = async ({
+    review, ticket, amount,
+    app, admit, deny, member
+}, message) => {
     const rolesToFetch = review          ? airlockRoleIds
                        : ticket          ? [approvedRoleId]
                        : /* otherwise */   null
@@ -270,9 +273,14 @@ const run = async ({review, ticket, amount, admit, deny, member}, message) => {
         } else if (ticket) {
             message.reply('No one is awaiting a ticket.')
         }
-    // We're permitting a user to enter.
+    // We're requesting the application for a user.
+    } else if (app) {
+        const applicationUrl =
+            userApplications.get(member.id)?.url ?? 'No application found.'
+        message.reply(applicationUrl)
     } else if ((admit || deny) && member.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to admit or deny someone who is a full member of the server.')
+    // We're permitting a user to enter.
     } else if (admit) {
         await member.roles.remove(approvedRoleId)
         await member.roles.add(memberRoleId)
@@ -347,6 +355,7 @@ module.exports = {
     usage: [
         '"review" amount:wholeNumber',
         '"ticket" amount:wholeNumber',
+        '"app" member:member',
         '"admit" member:member',
         '"deny" member:member',
     ],
