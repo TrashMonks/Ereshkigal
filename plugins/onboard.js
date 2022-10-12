@@ -192,7 +192,7 @@ const computeUserIdFromMessage = (message) => {
 
 const run = async ({
     review, ticket, amount,
-    app, admit, deny, member
+    app, admit, deny, who
 }, message) => {
     const rolesToFetch = review          ? airlockRoleIds
                        : ticket          ? [approvedRoleId]
@@ -276,23 +276,23 @@ const run = async ({
     // We're requesting the application for a user.
     } else if (app) {
         const applicationUrl =
-            userApplications.get(member.id)?.url ?? 'No application found.'
+            userApplications.get(who.id)?.url ?? 'No application found.'
         message.reply(applicationUrl)
-    } else if ((admit || deny) && member.roles.cache.has(memberRoleId)) {
+    } else if ((admit || deny) && who.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to admit or deny someone who is a full member of the server.')
     // We're permitting a user to enter.
     } else if (admit) {
-        await member.roles.remove(approvedRoleId)
-        await member.roles.add(memberRoleId)
-        const content = `🌈${member} has been granted access to the server.`
+        await who.roles.remove(approvedRoleId)
+        await who.roles.add(memberRoleId)
+        const content = `🌈${who} has been granted access to the server.`
         await message.reply(content)
         const approvalChannel =
             await guild.channels.resolve(approvalChannelId)
         await approvalChannel.send(content)
     // We're denying a user entry.
     } else if (deny) {
-        await member.roles.add(deniedRoleId)
-        await message.reply(`⛔${member} has been denied entry.`)
+        await who.roles.add(deniedRoleId)
+        await message.reply(`⛔${who} has been denied entry.`)
     // A fallback case in case of programming mistakes.
     } else {
         await message.reply('Hmm, this message was supposed to be impossible.')
@@ -355,9 +355,9 @@ module.exports = {
     usage: [
         '"review" amount:wholeNumber',
         '"ticket" amount:wholeNumber',
-        '"app" member:member',
-        '"admit" member:member',
-        '"deny" member:member',
+        '"app" who:user',
+        '"admit" who:member',
+        '"deny" who:member',
     ],
     synopsis: 'Handle onboarding of new members.',
     description:
