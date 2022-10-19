@@ -192,7 +192,7 @@ const computeUserIdFromMessage = (message) => {
 
 const run = async ({
     review, ticket, amount,
-    app, admit, deny, who
+    app, admit, kick, ban, who, reason
 }, message) => {
     const rolesToFetch = review          ? airlockRoleIds
                        : ticket          ? [approvedRoleId]
@@ -278,8 +278,8 @@ const run = async ({
         const applicationUrl =
             userApplications.get(who.id)?.url ?? 'No application found.'
         message.reply(applicationUrl)
-    } else if ((admit || deny) && who.roles.cache.has(memberRoleId)) {
-        await message.reply('I am unable to admit or deny someone who is a full member of the server.')
+    } else if ((admit || kick || ban) && who.roles.cache.has(memberRoleId)) {
+        await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
     // We're permitting a user to enter.
     } else if (admit) {
         await who.roles.remove(approvedRoleId)
@@ -289,10 +289,30 @@ const run = async ({
         const approvalChannel =
             await guild.channels.resolve(approvalChannelId)
         await approvalChannel.send(content)
+    // We're temporarily removing a user so they will go to the back of the queue.
+    } else if (reason.length === 0) {
+        await message.reply('You must provide a non-empty reason.')
+    } else if (kick) {
+        if (!who.kickable) {
+            await message.reply('I am unable to kick that user.')
+            return
+        }
+
+        await who.send('You have been removed from the Caves of Qud server onboarding queue. You may rejoin in order to requeue. The following reason was given:')
+        await who.send(reason)
+        await message.reply(`⛔${who} has been kicked with this reason: ${reason}`)
+        await who.kick(reason)
     // We're denying a user entry.
-    } else if (deny) {
-        await who.roles.add(deniedRoleId)
-        await message.reply(`⛔${who} has been denied entry.`)
+    } else if (ban) {
+        if (!who.bannable) {
+            await message.reply('I am unable to ban that user.')
+            return
+        }
+
+        await who.send('You have been denied entry to the Caves of Qud server, with the following reason given:')
+        await who.send(reason)
+        await message.reply(`⛔${who} has been **banned** with this reason: ${reason}`)
+        await who.ban({reason})
     // A fallback case in case of programming mistakes.
     } else {
         await message.reply('Hmm, this message was supposed to be impossible.')
@@ -357,7 +377,8 @@ module.exports = {
         '"ticket" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
-        '"deny" who:member',
+        '"kick" who:member ...reason',
+        '"ban" who:member ...reason',
     ],
     synopsis: 'Handle onboarding of new members.',
     description:
@@ -369,7 +390,8 @@ module.exports = {
 - The \`onboard app\` subcommand retrieves the URL for the given user's application, if there is one.
 The following commands only work on users who are not full members.
 - The \`onboard admit\` subcommand grants full entry to the server to the specified user.
-- The \`onboard deny\` subcommand denies entry to the specified user, kicking them as mentioned above.`,
+- The \`onboard kick\` subcommand kicks the user. The reason is required and will be DMed to them.
+- The \`onboard ban\` subcommand bans the user. The reason is required and will be DMed to them.`,
     initialize,
     ready,
     run,
