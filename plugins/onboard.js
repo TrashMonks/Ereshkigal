@@ -190,12 +190,17 @@ const computeUserIdFromMessage = (message) => {
     }
 }
 
-const run = async ({
-    review, ticket, amount,
-    app, admit, kick, ban, who, reason
-}, message) => {
+const run = async (args, message) => {
+    // We have to name args instead of just destructuring it, because we need
+    // to check a property whose name is a reserved word, "new".
+    const {
+        review, ticket, amount,
+        app, admit, kick, ban, who, reason
+    } = args
+
     const rolesToFetch = review          ? airlockRoleIds
                        : ticket          ? [approvedRoleId]
+                       : args['new']     ? [approvedRoleId]
                        : /* otherwise */   null
     const guild = message.guild
 
@@ -241,6 +246,16 @@ const run = async ({
                 !selectedPatrons.includes(applicant)
             ).slice(0, amount - selectedPatrons.length)
         )
+
+        if (args['new']) {
+            if (selectedApplicants.length === 0) {
+                message.reply('No one is awaiting a ticket.')
+            }
+            for (const applicant of selectedApplicants) {
+                message.reply(`$new ${applicant.id}`)
+            }
+            return
+        }
 
         let replyLines = []
         let count = 0
@@ -375,6 +390,7 @@ module.exports = {
     usage: [
         '"review" amount:wholeNumber',
         '"ticket" amount:wholeNumber',
+        '"new" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
         '"kick" who:member ...reason',
@@ -387,6 +403,7 @@ module.exports = {
 - When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - The \`onboard review\` subcommand lists applications that have yet to be approved or denied. If able, it will ensure that at least half of them (rounded up) are patrons.
 - The \`onboard ticket\` subcommand lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
+- The \`onboard new\` subcommand works the same as \`onboard ticket\`, except it outputs the commands to get Ticket Tool to open tickets for the users.
 - The \`onboard app\` subcommand retrieves the URL for the given user's application, if there is one.
 The following commands only work on users who are not full members.
 - The \`onboard admit\` subcommand grants full entry to the server to the specified user.
