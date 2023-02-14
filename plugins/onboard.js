@@ -211,7 +211,7 @@ const run = async (args, message) => {
     // to check a property whose name is a reserved word, "new".
     const {
         review, ticket, amount,
-        app, fridge, freeze, admit, kick, ban, who, reason
+        app, fridge, freeze, admit, kick, ban, who, channel, reason
     } = args
 
     const rolesToFetch = review          ? airlockRoleIds
@@ -224,9 +224,13 @@ const run = async (args, message) => {
     if (rolesToFetch !== null) {
         // Users are excluded from the listing if they're already in tickets,
         // so first we retrieve all the ticket channels.
-        const ticketChannels = (await Promise.all(
+        const ticketCategories = await Promise.all(
             onboardingCategoryIds.map((id) => guild.channels.fetch(id))
-        )).flatMap((category) => Array.from(category.children.values()))
+        )
+        ticketCategories.push(await guild.channels.fetch(fridgeCategoryId))
+        const ticketChannels = ticketCategories.flatMap(
+            (category) => Array.from(category.children.values())
+        )
 
         // Now we can retrieve all the users of the role we're asking for.
         let applicants = (await Promise.all(
@@ -311,7 +315,22 @@ const run = async (args, message) => {
         message.reply(applicationUrl)
     // We're sending a ticket to or retrieving a ticket from the fridge.
     } else if (fridge) {
-        await message.reply('TODO')
+        const fridgeCategory = await guild.channels.fetch(fridgeCategoryId)
+        // The channel is fridged. Unfridge it.
+        if (channel.parent.id === fridgeCategoryId) {
+            const ticketCategories = await Promise.all(
+                onboardingCategoryIds.map((id) => guild.channels.fetch(id))
+            )
+            await channel.setParent(ticketCategories[0]) // TODO
+            await message.reply('I have taken that channel out of the fridge.')
+        // The channel is unfridged. Fridge it.
+        } else if (onboardingCategoryIds.some((id) => channel.parent.id === id)) {
+            await channel.setParent(fridgeCategory, {lockPermissions: false})
+            await message.reply('I have put that channel in the fridge.')
+        // The channel is not a fridgable channel.
+        } else {
+            await message.reply("That isn't in a ticket category.")
+        }
     } else if ((admit || freeze || kick || ban) && who.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
     // We're freezing or unfreezing an onboardee.
