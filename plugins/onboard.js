@@ -3,6 +3,7 @@ const {Collection, DiscordAPIError} = require('discord.js')
 const {fatal} = require('../log')
 
 let onboardingCategoryIds
+let fridgeCategoryId
 let applicationChannelId
 let approvalChannelId
 let airlockRoleIds
@@ -10,6 +11,7 @@ let approvedRoleId
 let deniedRoleId
 let memberRoleId
 let patronRoleIds
+let freezerRoleId
 
 // A mapping from Discord user IDs onto message objects. This is updated
 // immediately after connecting to the Discord API and then continuously as new
@@ -19,6 +21,7 @@ const userApplications = new Map
 const initialize = ({config}) => {
     ({
         onboardingCategoryIds,
+        fridgeCategoryId,
         applicationChannelId,
         approvalChannelId,
         airlockRoleIds,
@@ -26,11 +29,18 @@ const initialize = ({config}) => {
         deniedRoleId,
         memberRoleId,
         patronRoleIds,
+        freezerRoleId,
     } = config?.onboarding ?? {})
 
     if (onboardingCategoryIds === undefined) {
         fatal(
 `Please list out onboarding categories by editing the "onboardingCategoryIds" field under "onboarding".`
+        )
+    }
+
+    if (fridgeCategoryId === undefined) {
+        fatal(
+`Please specify a fridge category by editing the "fridgeCategoryId" field under "onboarding".`
         )
     }
 
@@ -73,6 +83,12 @@ const initialize = ({config}) => {
     if (patronRoleIds === undefined) {
         fatal(
 `Please list out patron roles by editing the "patronRoleIds" field under "onboarding".`
+        )
+    }
+
+    if (freezerRoleId === undefined) {
+        fatal(
+`Please specify a freezer role by editing the "freezerRoleId" field under "onboarding".`
         )
     }
 }
@@ -195,7 +211,7 @@ const run = async (args, message) => {
     // to check a property whose name is a reserved word, "new".
     const {
         review, ticket, amount,
-        app, admit, kick, ban, who, reason
+        app, fridge, freeze, admit, kick, ban, who, reason
     } = args
 
     const rolesToFetch = review          ? airlockRoleIds
@@ -293,11 +309,27 @@ const run = async (args, message) => {
         const applicationUrl =
             userApplications.get(who.id)?.url ?? 'No application found.'
         message.reply(applicationUrl)
-    } else if ((admit || kick || ban) && who.roles.cache.has(memberRoleId)) {
+    // We're sending a ticket to or retrieving a ticket from the fridge.
+    } else if (fridge) {
+        await message.reply('TODO')
+    } else if ((admit || freeze || kick || ban) && who.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
+    // We're freezing or unfreezing an onboardee.
+    } else if (freeze) {
+        if (who.roles.cache.has(freezerRoleId)) {
+            await who.roles.remove(freezerRoleId)
+            await message.reply(`I have removed the freezer role from ${who}.`)
+        } else {
+            await who.roles.add(freezerRoleId)
+            await message.reply(`I have added the freezer role to ${who}.`)
+        }
     // We're permitting a user to enter.
     } else if (admit) {
         await who.roles.remove(approvedRoleId)
+        await who.roles.remove(freezerRoleId)
+        for (airlockRoleId of airlockRoleIds) {
+            await who.roles.remove(airlockRoleId)
+        }
         await who.roles.add(memberRoleId)
         const content = `🌈${who} has been granted access to the server.`
         await message.reply(content)
@@ -305,7 +337,7 @@ const run = async (args, message) => {
             await guild.channels.resolve(approvalChannelId)
         await approvalChannel.send(content)
     // We're temporarily removing a user so they will go to the back of the queue.
-    } else if (reason.length === 0) {
+    } else if (reason !== undefined && reason.length === 0) {
         await message.reply('You must provide a non-empty reason.')
     } else if (kick) {
         if (!who.kickable) {
@@ -392,6 +424,8 @@ module.exports = {
         '"ticket" amount:wholeNumber',
         '"new" amount:wholeNumber',
         '"app" who:user',
+        '"fridge" channel:channel',
+        '"freeze" who:member',
         '"admit" who:member',
         '"kick" who:member ...reason',
         '"ban" who:member ...reason',
@@ -402,13 +436,15 @@ module.exports = {
 - When an applicant is approved for server entry, it sends notice of this to a channel.
 - When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - The \`onboard review\` subcommand lists applications that have yet to be approved or denied. If able, it will ensure that at least half of them (rounded up) are patrons.
-- The \`onboard ticket\` subcommand lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
-- The \`onboard new\` subcommand works the same as \`onboard ticket\`, except it outputs the commands to get Ticket Tool to open tickets for the users.
-- The \`onboard app\` subcommand retrieves the URL for the given user's application, if there is one.
+- \`onboard ticket\` lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
+- \`onboard new\` works the same as \`onboard ticket\`, except it outputs the commands to get Ticket Tool to open tickets for the users.
+- \`onboard app\` retrieves the URL for the given user's application, if there is one.
+- \`onboard fridge\` moves a ticket channel to or from the fridge category, which is for tickets that are on hold but it's expected they may respond at some point.
 The following commands only work on users who are not full members.
-- The \`onboard admit\` subcommand grants full entry to the server to the specified user.
-- The \`onboard kick\` subcommand kicks the user. The reason is required and will be DMed to them.
-- The \`onboard ban\` subcommand bans the user. The reason is required and will be DMed to them.`,
+- \`onboard freeze\` adds or removes the freezer role on a user, which is for users who've been nonresponsive for a long time. It's expected that they will open their own tickets when they're ready.
+- \`onboard admit\` grants full entry to the server to the specified user.
+- \`onboard kick\` kicks the user. The reason is required and will be DMed to them.
+- \`onboard ban\` bans the user. The reason is required and will be DMed to them.`,
     initialize,
     ready,
     run,

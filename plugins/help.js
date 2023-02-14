@@ -50,12 +50,12 @@ ${otherSynopses.join('\n') || '(None)'}`
                 )
             } else {
                 await message.reply(
-`**${plugin.name}** – ${plugin.synopsis}\n\
-${bot.formatUsage(plugin)}${
-    typeof plugin.description === 'string'  ? '\n' + plugin.description
-    /* otherwise */                         : ''
-}`
+`**${plugin.name}** – ${plugin.synopsis}
+${bot.formatUsage(plugin)}`
                 )
+                if (typeof plugin.description === 'string') {
+                    await message.reply(plugin.description)
+                }
             }
         }
     },
