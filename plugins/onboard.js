@@ -249,6 +249,8 @@ const run = async (args, message) => {
             .filter(isNotMember)
             // Exclude anyone in a ticket.
             .filter(isNotInTicket(ticketChannels))
+            // Exclude anyone who's in the freezer.
+            .filter(isNotFrozen)
             // Sort by how long they've been on the server.
             .sort(byJoinDate)
 
@@ -426,6 +428,9 @@ const isNotMember = (member) =>
 const isNotInTicket = (ticketChannels) => (member) =>
     !ticketChannels.some((channel) =>
         channel.permissionsFor(member).has('VIEW_CHANNEL'))
+
+const isNotFrozen = (member) =>
+    !member.roles.cache.has(freezerRoleId)
 
 // Order the two given members by ascending join date. This is used with
 // sorting functions expecting negative, zero, or positive based on an order.
