@@ -342,7 +342,17 @@ const run = async (args, message) => {
             await message.reply(`I have removed the freezer role from ${who}.`)
         } else {
             await who.roles.add(freezerRoleId)
-            await message.reply(`I have added the freezer role to ${who}.`)
+            try {
+                await who.send(
+'Your entrance to the Caves of Qud Discord has been put on hold due to inactivity; please see #cryobarrio for instructions.'
+                )
+            } catch (_) {
+                await message.reply(
+`I have added the freezer role to ${who}; however, I was unable to reach the user by DM.`
+                )
+                return
+            }
+            await message.reply(`I have added the freezer role to ${who} and sent an explanatory DM.`)
         }
     // We're permitting a user to enter.
     } else if (admit) {
@@ -465,7 +475,7 @@ module.exports = {
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
 - \`onboard fridge\` moves a ticket channel to or from the fridge category, which is for tickets that are on hold but it's expected they may respond at some point.
 The following commands only work on users who are not full members.
-- \`onboard freeze\` adds or removes the freezer role on a user, which is for users who've been nonresponsive for a long time. It's expected that they will open their own tickets when they're ready.
+- \`onboard freeze\` adds or removes the freezer role on a user, which is for users who've been nonresponsive for a long time. It's expected that they will open their own tickets when they're ready. **Adding the role sends the user a DM**; however, removing it does not.
 - \`onboard admit\` grants full entry to the server to the specified user.
 - \`onboard kick\` kicks the user. The reason is required and will be DMed to them.
 - \`onboard ban\` bans the user. The reason is required and will be DMed to them.`,
