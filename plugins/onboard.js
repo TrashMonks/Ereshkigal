@@ -323,7 +323,7 @@ const run = async (args, message) => {
             const ticketCategories = await Promise.all(
                 onboardingCategoryIds.map((id) => guild.channels.fetch(id))
             )
-            await channel.setParent(ticketCategories[0]) // TODO
+            await channel.setParent(ticketCategories[0], {lockPermissions: false}) // TODO
             await message.reply('I have taken that channel out of the fridge.')
         // The channel is unfridged. Fridge it.
         } else if (onboardingCategoryIds.some((id) => channel.parent.id === id)) {
