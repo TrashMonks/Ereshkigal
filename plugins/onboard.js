@@ -197,7 +197,7 @@ const computeUserIdFromMessage = (message) => {
         // The field is named "Application stats". It must be an exact match!
         const statsField = embed.fields.find(
             (field) => field.name === 'Application stats'
-        ).value
+        )?.value
 
         // Parse the applicant's user ID out of the field value.
         const match = /\*\*(?<id>\d+)\*\*/.exec(statsField)
