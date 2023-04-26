@@ -271,10 +271,11 @@ const run = async (args, message) => {
 
         if (args['new']) {
             if (selectedApplicants.length === 0) {
-                message.reply('No one is awaiting a ticket.')
+                await message.reply('No one is awaiting a ticket.')
             }
             for (const applicant of selectedApplicants) {
-                message.reply(`$new ${applicant.id}`)
+                await message.reply(`$new ${applicant.id}`)
+                await setTimeout(1000)
             }
             return
         }
