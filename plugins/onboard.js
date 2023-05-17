@@ -152,58 +152,67 @@ const computeUserIdFromMessage = (message) => {
     // sends to represent the applications. If something suddenly and
     // mysteriously breaks in the future, you know where to look first.
 
-    // A message in the application channel can be one of the following:
-    // - an application with an embed
-    // - an unaccepted application without an embed
-    // - an accepted application without an embed
-    // - not an application
+    // First, check the message content for a mention with "'s" attached. This
+    // is meant to disambiguate accepted or denied applications in which the
+    // onboarder's mention may come first, but the applicant's mention is
+    // phrased as a possessive.
 
-    // We'll distinguish non-applications, or applications in an unknown format
-    // (which are functionally the same thing) based on the presence or absence
-    // of certain features assumed to be present on applications.
+    const possessiveMatch = /<@!?(?<id>\d+)>'s/.exec(message.content)
 
-    // To determine which it is, first we need to know if there's an embed.
-    const embed = message.embeds[0]
+    if (possessiveMatch !== null) {
+        return possessiveMatch.groups.id
+    }
 
-    // If there's no embed, it could be because the fields were too long for
-    // the application bot to use an embed, so it's an attachment instead. The
-    // user ID doesn't appear on this kind, but at least the username and
-    // discriminator combo do, so we can still find the user.
-    if (embed === undefined) {
-        const unacceptedPattern =
-/\*\*(?<username>.*)\#(?<discriminator>.*)'s application/
-        const unacceptedMatch = unacceptedPattern.exec(message.content)
+    // If that wasn't found, most likely it's fine to just search the message
+    // and its embeds for a mention and assume that's the applicant.
 
-        // If that didn't match, it's still possible it's an accepted app.
-        if (unacceptedMatch === null) {
-            const acceptedPattern = /<@(?<id>\d+)>'s application/
-            const acceptedMatch = acceptedPattern.exec(message.content)
-            if (acceptedMatch === null) { return null }
-            return acceptedMatch.groups.id
+    const mentionPattern = /<@!?(?<id>\d+)>/
+
+    const messageMentionMatch = mentionPattern.exec(message.content)
+    if (messageMentionMatch !== null) {
+        return messageMentionMatch.groups.id
+    }
+
+    for (const embed of message.embeds) {
+        for (const field of embed.fields) {
+            const fieldMentionMatch = mentionPattern.exec(field.value)
+            if (fieldMentionMatch !== null) {
+                return fieldMentionMatch.groups.id
+            }
         }
+    }
 
-        const username = unacceptedMatch.groups.username
-        const discriminator = unacceptedMatch.groups.discriminator
+    // Finally, if there was no mention whatsoever, it's most likely an older
+    // application that contains only a username#discriminator in the message
+    // content. Some of them may no longer be valid but we can try to match
+    // up the ones that are still possible and flag the rest.
+
+    const oldPattern = /\*\*(?<username>.*)\#(?<discriminator>.*)'s application/
+    const oldMatch = oldPattern.exec(message.content)
+
+    if (oldMatch !== null) {
+        const username = oldMatch.groups.username
+        const discriminator = oldMatch.groups.discriminator
 
         // Check the username-discriminator combo against all cached users.
-        return message.guild.members.cache.filter((member) => {
+        const result = message.guild.members.cache.filter((member) => {
             const user = member.user
             return user.username === username
                 && user.discriminator === discriminator
         })?.first()?.id ?? null
 
-    // If there's an embed, the user ID should show up in one of the fields.
-    } else {
-        // The field is named "Application stats". It must be an exact match!
-        const statsField = embed.fields.find(
-            (field) => field.name === 'Application stats'
-        )?.value
+        if (result === null) {
+            console.warn('Missing user:', message.url)
+        }
 
-        // Parse the applicant's user ID out of the field value.
-        const match = /\*\*(?<id>\d+)\*\*/.exec(statsField)
-
-        return match?.groups.id ?? null
+        return result
     }
+
+    // That's it. At this point if the message hasn't met any of those tests,
+    // it's probably not an application.
+
+    console.warn('No apparent user:', message.url)
+    return null
 }
 
 const run = async (args, message) => {
