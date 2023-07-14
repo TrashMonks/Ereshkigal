@@ -3,7 +3,6 @@ const {Collection, DiscordAPIError} = require('discord.js')
 const {fatal} = require('../log')
 
 let onboardingCategoryIds
-let fridgeCategoryId
 let applicationChannelId
 let approvalChannelId
 let airlockRoleIds
@@ -11,7 +10,6 @@ let approvedRoleId
 let deniedRoleId
 let memberRoleId
 let patronRoleIds
-let freezerRoleId
 
 // A mapping from Discord user IDs onto message objects. This is updated
 // immediately after connecting to the Discord API and then continuously as new
@@ -21,7 +19,6 @@ const userApplications = new Map
 const initialize = ({config}) => {
     ({
         onboardingCategoryIds,
-        fridgeCategoryId,
         applicationChannelId,
         approvalChannelId,
         airlockRoleIds,
@@ -29,18 +26,11 @@ const initialize = ({config}) => {
         deniedRoleId,
         memberRoleId,
         patronRoleIds,
-        freezerRoleId,
     } = config?.onboarding ?? {})
 
     if (onboardingCategoryIds === undefined) {
         fatal(
 `Please list out onboarding categories by editing the "onboardingCategoryIds" field under "onboarding".`
-        )
-    }
-
-    if (fridgeCategoryId === undefined) {
-        fatal(
-`Please specify a fridge category by editing the "fridgeCategoryId" field under "onboarding".`
         )
     }
 
@@ -83,12 +73,6 @@ const initialize = ({config}) => {
     if (patronRoleIds === undefined) {
         fatal(
 `Please list out patron roles by editing the "patronRoleIds" field under "onboarding".`
-        )
-    }
-
-    if (freezerRoleId === undefined) {
-        fatal(
-`Please specify a freezer role by editing the "freezerRoleId" field under "onboarding".`
         )
     }
 }
@@ -220,7 +204,7 @@ const run = async (args, message) => {
     // to check a property whose name is a reserved word, "new".
     const {
         review, ticket, amount,
-        app, fridge, freeze, admit, kick, ban, who, channel, reason
+        app, admit, kick, ban, who, reason
     } = args
 
     const rolesToFetch = review          ? airlockRoleIds
@@ -236,7 +220,6 @@ const run = async (args, message) => {
         const ticketCategories = await Promise.all(
             onboardingCategoryIds.map((id) => guild.channels.fetch(id))
         )
-        ticketCategories.push(await guild.channels.fetch(fridgeCategoryId))
         const ticketChannels = ticketCategories.flatMap(
             (category) => Array.from(category.children.values())
         )
@@ -258,8 +241,6 @@ const run = async (args, message) => {
             .filter(isNotMember)
             // Exclude anyone in a ticket.
             .filter(isNotInTicket(ticketChannels))
-            // Exclude anyone who's in the freezer.
-            .filter(isNotFrozen)
             // Sort by how long they've been on the server.
             .sort(byJoinDate)
 
@@ -325,49 +306,11 @@ const run = async (args, message) => {
         const applicationUrl =
             userApplications.get(who.id)?.url ?? 'No application found.'
         message.reply(applicationUrl)
-    // We're sending a ticket to or retrieving a ticket from the fridge.
-    } else if (fridge) {
-        const fridgeCategory = await guild.channels.fetch(fridgeCategoryId)
-        // The channel is fridged. Unfridge it.
-        if (channel.parent.id === fridgeCategoryId) {
-            const ticketCategories = await Promise.all(
-                onboardingCategoryIds.map((id) => guild.channels.fetch(id))
-            )
-            await channel.setParent(ticketCategories[0], {lockPermissions: false}) // TODO
-            await message.reply('I have taken that channel out of the fridge.')
-        // The channel is unfridged. Fridge it.
-        } else if (onboardingCategoryIds.some((id) => channel.parent.id === id)) {
-            await channel.setParent(fridgeCategory, {lockPermissions: false})
-            await message.reply('I have put that channel in the fridge.')
-        // The channel is not a fridgable channel.
-        } else {
-            await message.reply("That isn't in a ticket category.")
-        }
-    } else if ((admit || freeze || kick || ban) && who.roles.cache.has(memberRoleId)) {
+    } else if ((admit || kick || ban) && who.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
-    // We're freezing or unfreezing an onboardee.
-    } else if (freeze) {
-        if (who.roles.cache.has(freezerRoleId)) {
-            await who.roles.remove(freezerRoleId)
-            await message.reply(`I have removed the freezer role from ${who}.`)
-        } else {
-            await who.roles.add(freezerRoleId)
-            try {
-                await who.send(
-'Your entrance to the Caves of Qud Discord has been put on hold due to inactivity; please see #cryobarrio for instructions.'
-                )
-            } catch (_) {
-                await message.reply(
-`I have added the freezer role to ${who}; however, I was unable to reach the user by DM.`
-                )
-                return
-            }
-            await message.reply(`I have added the freezer role to ${who} and sent an explanatory DM.`)
-        }
     // We're permitting a user to enter.
     } else if (admit) {
         await who.roles.remove(approvedRoleId)
-        await who.roles.remove(freezerRoleId)
         for (airlockRoleId of airlockRoleIds) {
             await who.roles.remove(airlockRoleId)
         }
@@ -449,9 +392,6 @@ const isNotInTicket = (ticketChannels) => (member) =>
     !ticketChannels.some((channel) =>
         channel.permissionsFor(member).has('VIEW_CHANNEL'))
 
-const isNotFrozen = (member) =>
-    !member.roles.cache.has(freezerRoleId)
-
 // Order the two given members by ascending join date. This is used with
 // sorting functions expecting negative, zero, or positive based on an order.
 const byJoinDate = (memberA, memberB) =>
@@ -468,8 +408,6 @@ module.exports = {
         '"ticket" amount:wholeNumber',
         '"new" amount:wholeNumber',
         '"app" who:user',
-        '"fridge" channel:channel',
-        '"freeze" who:member',
         '"admit" who:member',
         '"kick" who:member ...reason',
         '"ban" who:member ...reason',
@@ -483,9 +421,7 @@ module.exports = {
 - \`onboard ticket\` lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
 - \`onboard new\` works the same as \`onboard ticket\`, except it outputs the commands to get Ticket Tool to open tickets for the users.
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
-- \`onboard fridge\` moves a ticket channel to or from the fridge category, which is for tickets that are on hold but it's expected they may respond at some point.
 The following commands only work on users who are not full members.
-- \`onboard freeze\` adds or removes the freezer role on a user, which is for users who've been nonresponsive for a long time. It's expected that they will open their own tickets when they're ready. **Adding the role sends the user a DM**; however, removing it does not.
 - \`onboard admit\` grants full entry to the server to the specified user.
 - \`onboard kick\` kicks the user. The reason is required and will be DMed to them.
 - \`onboard ban\` bans the user. The reason is required and will be DMed to them.`,
