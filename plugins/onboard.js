@@ -310,8 +310,12 @@ const run = async (args, message) => {
             return
         }
 
-        await who.send('You have been removed from the Caves of Qud server onboarding queue. You may rejoin in order to requeue. The following reason was given:')
-        await who.send(reason)
+        try {
+            await who.send('You have been removed from the Caves of Qud server onboarding queue. You may rejoin in order to requeue. The following reason was given:')
+            await who.send(reason)
+        } catch (_) {
+            // Even if we can't DM the user, kick them anyway.
+        }
         await message.reply(`⛔${who} has been kicked with this reason: ${reason}`)
         await who.kick(reason)
     // We're denying a user entry.
@@ -321,8 +325,12 @@ const run = async (args, message) => {
             return
         }
 
-        await who.send('You have been denied entry to the Caves of Qud server, with the following reason given:')
-        await who.send(reason)
+        try {
+            await who.send('You have been denied entry to the Caves of Qud server, with the following reason given:')
+            await who.send(reason)
+        } catch (_) {
+            // Even if we can't DM the user, ban them anyway.
+        }
         await message.reply(`⛔${who} has been **banned** with this reason: ${reason}`)
         await who.ban({reason})
     // A fallback case in case of programming mistakes.
