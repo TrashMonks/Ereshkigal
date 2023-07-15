@@ -2,7 +2,6 @@ const {setTimeout} = require('timers/promises')
 const {Collection, DiscordAPIError} = require('discord.js')
 const {fatal} = require('../log')
 
-let onboardingCategoryIds
 let applicationChannelId
 let approvalChannelId
 let airlockRoleIds
@@ -18,7 +17,6 @@ const userApplications = new Map
 
 const initialize = ({config}) => {
     ({
-        onboardingCategoryIds,
         applicationChannelId,
         approvalChannelId,
         airlockRoleIds,
@@ -27,12 +25,6 @@ const initialize = ({config}) => {
         memberRoleId,
         patronRoleIds,
     } = config?.onboarding ?? {})
-
-    if (onboardingCategoryIds === undefined) {
-        fatal(
-`Please list out onboarding categories by editing the "onboardingCategoryIds" field under "onboarding".`
-        )
-    }
 
     if (applicationChannelId === undefined) {
         fatal(
@@ -215,16 +207,7 @@ const run = async (args, message) => {
 
     // We're listing out users in one of the queues.
     if (rolesToFetch !== null) {
-        // Users are excluded from the listing if they're already in tickets,
-        // so first we retrieve all the ticket channels.
-        const ticketCategories = await Promise.all(
-            onboardingCategoryIds.map((id) => guild.channels.fetch(id))
-        )
-        const ticketChannels = ticketCategories.flatMap(
-            (category) => Array.from(category.children.values())
-        )
-
-        // Now we can retrieve all the users of the role we're asking for.
+        // Retrieve all the users of the role we're asking for.
         let applicants = (await Promise.all(
             rolesToFetch.map((roleId) => guild.roles.fetch(roleId))
         )).flatMap((role) => Array.from(role.members.values()))
@@ -239,8 +222,6 @@ const run = async (args, message) => {
             // Normally, all users with these roles shouldn't be members, but in
             // case something weird happens, go ahead and filter them out.
             .filter(isNotMember)
-            // Exclude anyone in a ticket.
-            .filter(isNotInTicket(ticketChannels))
             // Sort by how long they've been on the server.
             .sort(byJoinDate)
 
@@ -385,12 +366,6 @@ const hasApplication = (member) =>
 // Does the given member lack the full member role?
 const isNotMember = (member) =>
     !member.roles.cache.has(memberRoleId)
-
-// Is the given member not already in a ticket? This means they can see one of
-// the ticket channels.
-const isNotInTicket = (ticketChannels) => (member) =>
-    !ticketChannels.some((channel) =>
-        channel.permissionsFor(member).has('VIEW_CHANNEL'))
 
 // Order the two given members by ascending join date. This is used with
 // sorting functions expecting negative, zero, or positive based on an order.
