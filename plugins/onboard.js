@@ -1,5 +1,5 @@
 const {setTimeout} = require('timers/promises')
-const {Collection, DiscordAPIError} = require('discord.js')
+const {Collection} = require('discord.js')
 const {fatal} = require('../log')
 
 let applicationChannelId
@@ -191,81 +191,79 @@ const computeUserIdFromMessage = (message) => {
     return null
 }
 
-const run = async (args, message) => {
-    // We have to name args instead of just destructuring it, because we need
-    // to check a property whose name is a reserved word, "new".
-    const {
-        review, ticket, amount,
-        app, admit, kick, ban, who, reason
-    } = args
-
-    const rolesToFetch = review          ? airlockRoleIds
-                       : ticket          ? [approvedRoleId]
-                       : args['new']     ? [approvedRoleId]
-                       : /* otherwise */   null
+const run = async ({
+    view, admit, next, amount,
+    app, kick, ban, who, reason
+}, message) => {
     const guild = message.guild
 
-    // We're listing out users in one of the queues.
-    if (rolesToFetch !== null) {
-        // Retrieve all the users of the role we're asking for.
-        let applicants = (await Promise.all(
-            rolesToFetch.map((roleId) => guild.roles.fetch(roleId))
-        )).flatMap((role) => Array.from(role.members.values()))
+    // We're retrieving the users who will be let in next.
+    if (next) {
+        const approved = Array.from(
+            (await guild.roles.fetch(approvedRoleId)).members
+            .filter(isNotMember)
+            .values()
+        ).sort(byJoinDate)
+        const remainder = Array.from(
+            guild.members.cache
+            .filter(isNotMember)
+            .filter((member) => !approved.includes(member))
+            .values()
+        ).sort(byJoinDate)
+        const queue = approved.concat(remainder)
+        const queuedPatrons = queue.filter(isPatron)
+        const queuedNonPatrons = queue.filter(isNotPatron)
 
-        // When reviewing applications, the users in question must have
-        // submitted an application.
-        if (review) {
-            applicants = applicants.filter(hasApplication)
+        // Intersperse patrons and non-patrons.
+        const selectedMembers = []
+        let n = 0
+        while (n < amount) {
+            if (n % 2 == 0 && queuedPatrons.length > 0) {
+                selectedMembers.push(queuedPatrons.shift())
+            } else if (queuedNonPatrons.length > 0) {
+                selectedMembers.push(queuedNonPatrons.shift())
+            } else {
+                break
+            }
+
+            n += 1
         }
 
-        applicants = applicants
-            // Normally, all users with these roles shouldn't be members, but in
-            // case something weird happens, go ahead and filter them out.
-            .filter(isNotMember)
-            // Sort by how long they've been on the server.
-            .sort(byJoinDate)
+        // Admit the retrieved users.
+        if (admit) {
+            const AMOUNT_CAP = 10
 
-        // Now select some number of applicants to present.
-
-        // Give a certain amount of priority to patrons. Try to find patrons
-        // for half of the requested applicants, rounded up.
-        const patronAmount = Math.ceil(amount / 2)
-        const selectedPatrons = applicants
-            .filter(isPatron)
-            .slice(0, patronAmount)
-        // Pad out the rest with any applicants not already selected.
-        const selectedApplicants = selectedPatrons.concat(
-            applicants.filter((applicant) =>
-                !selectedPatrons.includes(applicant)
-            ).slice(0, amount - selectedPatrons.length)
-        )
-
-        if (args['new']) {
-            if (selectedApplicants.length === 0) {
-                await message.reply('No one is awaiting a ticket.')
+            if (amount > AMOUNT_CAP) {
+                message.reply(
+                    `To avoid accidents, there is currently a cap of ${AMOUNT_CAP} on how many users may be batch-admitted at once. Please request at most that many.`
+                )
+                return
             }
-            for (const applicant of selectedApplicants) {
-                await message.reply(`$new ${applicant.id}`)
-                await setTimeout(1000)
+
+            for (const member of selectedMembers) {
+                await admitMember(member)
             }
+            await message.reply('I have admitted the requested batch.')
             return
         }
+
+        // Output the retrieved users.
 
         let replyLines = []
         let count = 0
         let hasOutputAlready = false
-        const MAX_APPLICANTS_PER_MESSAGE = 10
-        for (const applicant of selectedApplicants) {
+        const MAX_ENTRIES_PER_MESSAGE = 10
+        for (const member of selectedMembers) {
             const patronText =
-                isPatron(applicant) ? ' (Patron)'
-              : /* otherwise */       ''
+                isPatron(member) ? ' (Patron)'
+              : /* otherwise */    ''
             const applicationUrl =
-            userApplications.get(applicant.id)?.url ?? 'No application found.'
-            const time = Math.floor(applicant.joinedTimestamp / 1000)
+            userApplications.get(member.id)?.url ?? 'No application found.'
+            const time = Math.floor(member.joinedTimestamp / 1000)
             replyLines.push(
-`<@${applicant.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
+`<@${member.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
             )
-            count = (count + 1) % MAX_APPLICANTS_PER_MESSAGE
+            count = (count + 1) % MAX_ENTRIES_PER_MESSAGE
             if (count === 0) {
                 message.reply(replyLines.join('\n'))
                 replyLines.length = 0
@@ -276,11 +274,9 @@ const run = async (args, message) => {
         if (replyLines.length !== 0) {
             message.reply(replyLines.join('\n'))
         } else if (hasOutputAlready) {
-            // Do nothing. We've already listed some applicants.
-        } else if (review) {
-            message.reply('No one is awaiting review.')
-        } else if (ticket) {
-            message.reply('No one is awaiting a ticket.')
+            // Do nothing. We've already listed some users.
+        } else {
+            message.reply('No results.')
         }
     // We're requesting the application for a user.
     } else if (app) {
@@ -291,16 +287,8 @@ const run = async (args, message) => {
         await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
     // We're permitting a user to enter.
     } else if (admit) {
-        await who.roles.remove(approvedRoleId)
-        for (airlockRoleId of airlockRoleIds) {
-            await who.roles.remove(airlockRoleId)
-        }
-        await who.roles.add(memberRoleId)
-        const content = `🌈${who} has been granted access to the server.`
-        await message.reply(content)
-        const approvalChannel =
-            await guild.channels.resolve(approvalChannelId)
-        await approvalChannel.send(content)
+        await admitMember(who)
+        await message.reply(`🌈${who} has been granted access to the server.`)
     // We're temporarily removing a user so they will go to the back of the queue.
     } else if (reason !== undefined && reason.length === 0) {
         await message.reply('You must provide a non-empty reason.')
@@ -367,6 +355,24 @@ const fetchAllMessages = async (channel) => {
     return messages
 }
 
+const admitMember = async (member) => {
+    await member.roles.remove(approvedRoleId)
+    for (const airlockRoleId of airlockRoleIds) {
+        await member.roles.remove(airlockRoleId)
+    }
+    await member.roles.add(memberRoleId)
+    const content = `🌈${member} has been granted access to the server.`
+    const approvalChannel =
+        await member.guild.channels.resolve(approvalChannelId)
+    await approvalChannel.send(content)
+
+    try {
+        await member.send('You have been admitted to the Caves of Qud server.')
+    } catch (_) {
+        console.log(`I was unable to DM ${member}.`)
+    }
+}
+
 // Was an application found for the given member?
 const hasApplication = (member) =>
     userApplications.has(member.id)
@@ -384,12 +390,14 @@ const byJoinDate = (memberA, memberB) =>
 const isPatron = (member) =>
     patronRoleIds.some((patronRoleId) => member.roles.cache.has(patronRoleId))
 
+const isNotPatron = (member) =>
+    !isPatron(member)
+
 module.exports = {
     name: 'onboard',
     usage: [
-        '"review" amount:wholeNumber',
-        '"ticket" amount:wholeNumber',
-        '"new" amount:wholeNumber',
+        '"view" "next" amount:wholeNumber',
+        '"admit" "next" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
         '"kick" who:member ...reason',
@@ -398,16 +406,16 @@ module.exports = {
     synopsis: 'Handle onboarding of new members.',
     description:
 `This plugin is responsible for several different related functions:
-- When an applicant is approved for server entry, it sends notice of this to a channel.
-- When an applicant is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
-- The \`onboard review\` subcommand lists applications that have yet to be approved or denied. If able, it will ensure that at least half of them (rounded up) are patrons.
-- \`onboard ticket\` lists applications that have been approved but for which the applicant has yet to be admitted into the server. Like the \`review\` subcommand, it prioritizes patrons.
-- \`onboard new\` works the same as \`onboard ticket\`, except it outputs the commands to get Ticket Tool to open tickets for the users.
+- When a user is approved for server entry, it sends notice of this to a channel.
+- When a user is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
+- \`onboard view next\` shows the next \`amount\` users who will be let in.
+- \`onboard admit next\` lets in the next \`amount\` users.
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
-The following commands only work on users who are not full members.
+The following user-related commands only work on users who are not full members:
 - \`onboard admit\` grants full entry to the server to the specified user.
 - \`onboard kick\` kicks the user. The reason is required and will be DMed to them.
-- \`onboard ban\` bans the user. The reason is required and will be DMed to them.`,
+- \`onboard ban\` bans the user. The reason is required and will be DMed to them.
+Whenever a user is admitted, they are also DMed to let them know.`,
     initialize,
     ready,
     run,
