@@ -4,7 +4,6 @@ const {fatal} = require('../log')
 
 let applicationChannelId
 let approvalChannelId
-let airlockRoleIds
 let approvedRoleId
 let deniedRoleId
 let memberRoleId
@@ -19,7 +18,6 @@ const initialize = ({config}) => {
     ({
         applicationChannelId,
         approvalChannelId,
-        airlockRoleIds,
         approvedRoleId,
         deniedRoleId,
         memberRoleId,
@@ -35,12 +33,6 @@ const initialize = ({config}) => {
     if (approvalChannelId === undefined) {
         fatal(
 `Please specify an approval logging channel by editing the "approvalChannelId" field under "onboarding".`
-        )
-    }
-
-    if (airlockRoleIds === undefined) {
-        fatal(
-`Please list out airlock roles by editing the "airlockRoleIds" field under "onboarding".`
         )
     }
 
@@ -357,9 +349,6 @@ const fetchAllMessages = async (channel) => {
 
 const admitMember = async (member) => {
     await member.roles.remove(approvedRoleId)
-    for (const airlockRoleId of airlockRoleIds) {
-        await member.roles.remove(airlockRoleId)
-    }
     await member.roles.add(memberRoleId)
     const content = `🌈${member} has been granted access to the server.`
     const approvalChannel =
