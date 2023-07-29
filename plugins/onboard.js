@@ -224,7 +224,6 @@ const run = async ({
         // Admit the retrieved users.
         if (admit) {
             const AMOUNT_CAP = 10
-
             if (amount > AMOUNT_CAP) {
                 message.reply(
                     `To avoid accidents, there is currently a cap of ${AMOUNT_CAP} on how many users may be batch-admitted at once. Please request at most that many.`
@@ -232,6 +231,7 @@ const run = async ({
                 return
             }
 
+            await message.reply('Very well. Proceeding with admissions.')
             for (const member of selectedMembers) {
                 await admitMember(member)
             }
