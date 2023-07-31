@@ -263,7 +263,6 @@ const run = async ({
             attempts += 1
             grabbedUsers.add(users[Math.floor(Math.random() * users.length)])
         }
-        console.log(grabbedUsers, grabbedUsers.values())
         await outputMembers(message, Array.from(grabbedUsers.values()))
     // We're requesting the application for a user.
     } else if (app) {
