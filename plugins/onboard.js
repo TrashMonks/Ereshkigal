@@ -184,7 +184,7 @@ const computeUserIdFromMessage = (message) => {
 }
 
 const run = async ({
-    view, admit, next, amount,
+    view, admit, next, grab, amount,
     app, approve, kick, ban, who, reason
 }, message) => {
     const guild = message.guild
@@ -236,40 +236,35 @@ const run = async ({
                 await admitMember(member)
             }
             await message.reply('I have admitted the requested batch.')
+        // View the retrieved users.
+        } else if (view) {
+            await outputMembers(message, selectedMembers)
+        }
+    // We're fetching random applications.
+    } else if (grab) {
+        const users = Array.from(
+            guild.members.cache
+            .filter(isNotMember)
+            .filter(hasApplication)
+            .filter((member) => !member.roles.cache.has(approvedRoleId))
+            .values()
+        )
+        if (users.length <= amount) {
+            await outputMembers(message, users)
             return
         }
-
-        // Output the retrieved users.
-
-        let replyLines = []
-        let count = 0
-        let hasOutputAlready = false
-        const MAX_ENTRIES_PER_MESSAGE = 10
-        for (const member of selectedMembers) {
-            const patronText =
-                isPatron(member) ? ' (Patron)'
-              : /* otherwise */    ''
-            const applicationUrl =
-            userApplications.get(member.id)?.url ?? 'No application found.'
-            const time = Math.floor(member.joinedTimestamp / 1000)
-            replyLines.push(
-`<@${member.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
-            )
-            count = (count + 1) % MAX_ENTRIES_PER_MESSAGE
-            if (count === 0) {
-                message.reply(replyLines.join('\n'))
-                replyLines.length = 0
-                hasOutputAlready = true
-            }
+        // This is crude but straightforward: Keep adding a random user to the
+        // set until the set is as big as it needs to be. Because this
+        // operation is not guaranteed to terminate, there is a step limit.
+        const grabbedUsers = new Set
+        const MAX_ATTEMPTS = amount * 100
+        let attempts = 0
+        while (grabbedUsers.size < amount && attempts < MAX_ATTEMPTS) {
+            attempts += 1
+            grabbedUsers.add(users[Math.floor(Math.random() * users.length)])
         }
-
-        if (replyLines.length !== 0) {
-            message.reply(replyLines.join('\n'))
-        } else if (hasOutputAlready) {
-            // Do nothing. We've already listed some users.
-        } else {
-            message.reply('No results.')
-        }
+        console.log(grabbedUsers, grabbedUsers.values())
+        await outputMembers(message, Array.from(grabbedUsers.values()))
     // We're requesting the application for a user.
     } else if (app) {
         const applicationUrl =
@@ -375,6 +370,38 @@ const admitMember = async (member) => {
     }
 }
 
+const outputMembers = async (message, members) => {
+    let replyLines = []
+    let count = 0
+    let hasOutputAlready = false
+    const MAX_ENTRIES_PER_MESSAGE = 10
+    for (const member of members) {
+        const patronText =
+            isPatron(member) ? ' (Patron)'
+          : /* otherwise */    ''
+        const applicationUrl =
+        userApplications.get(member.id)?.url ?? 'No application found.'
+        const time = Math.floor(member.joinedTimestamp / 1000)
+        replyLines.push(
+`<@${member.id}>${patronText}, joined at <t:${time}:f> (<t:${time}:R>): ${applicationUrl}`
+        )
+        count = (count + 1) % MAX_ENTRIES_PER_MESSAGE
+        if (count === 0) {
+            message.reply(replyLines.join('\n'))
+            replyLines.length = 0
+            hasOutputAlready = true
+        }
+    }
+
+    if (replyLines.length !== 0) {
+        message.reply(replyLines.join('\n'))
+    } else if (hasOutputAlready) {
+        // Do nothing. We've already listed some users.
+    } else {
+        message.reply('No results.')
+    }
+}
+
 // Was an application found for the given member?
 const hasApplication = (member) =>
     userApplications.has(member.id)
@@ -400,6 +427,7 @@ module.exports = {
     usage: [
         '"view" "next" amount:wholeNumber',
         '"admit" "next" amount:wholeNumber',
+        '"grab" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
         '"approve" who:member',
@@ -413,6 +441,7 @@ module.exports = {
 - When a user is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - \`onboard view next\` shows the next \`amount\` users who will be let in.
 - \`onboard admit next\` lets in the next \`amount\` users.
+- \`onboard grab\` shows the applications of \`amount\` random users.
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
 The following user-related commands only work on users who are not full members:
 - \`onboard admit\` grants full entry to the server to the specified user.
