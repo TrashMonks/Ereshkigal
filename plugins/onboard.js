@@ -185,7 +185,7 @@ const computeUserIdFromMessage = (message) => {
 
 const run = async ({
     view, admit, next, amount,
-    app, kick, ban, who, reason
+    app, approve, kick, ban, who, reason
 }, message) => {
     const guild = message.guild
 
@@ -275,15 +275,28 @@ const run = async ({
         const applicationUrl =
             userApplications.get(who.id)?.url ?? 'No application found.'
         message.reply(applicationUrl)
-    } else if ((admit || kick || ban) && who.roles.cache.has(memberRoleId)) {
+    } else if ((admit || approve || kick || ban) && who.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
     // We're permitting a user to enter.
     } else if (admit) {
         await admitMember(who)
         await message.reply(`🌈${who} has been granted access to the server.`)
-    // We're temporarily removing a user so they will go to the back of the queue.
+    // We're moving a user up in the queue.
+    } else if (approve) {
+        if (who.roles.cache.has(approvedRoleId)) {
+            await message.reply('That user is already approved.')
+            return
+        }
+        await who.roles.add(approvedRoleId)
+        try {
+            await who.send("You've been moved up in the queue to join the Caves of Qud server. You will be DMed again when you're let in.")
+        } catch (_) {
+            // DMing failed.
+        }
+        await message.reply(`✅${who} has been approved for entry.`)
     } else if (reason !== undefined && reason.length === 0) {
         await message.reply('You must provide a non-empty reason.')
+    // We're temporarily removing a user so they will go to the back of the queue.
     } else if (kick) {
         if (!who.kickable) {
             await message.reply('I am unable to kick that user.')
@@ -389,6 +402,7 @@ module.exports = {
         '"admit" "next" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
+        '"approve" who:member',
         '"kick" who:member ...reason',
         '"ban" who:member ...reason',
     ],
@@ -402,6 +416,7 @@ module.exports = {
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
 The following user-related commands only work on users who are not full members:
 - \`onboard admit\` grants full entry to the server to the specified user.
+- \`onboard approve\` adds a user to the queue of users prioritized by the \`next\` commands.
 - \`onboard kick\` kicks the user. The reason is required and will be DMed to them.
 - \`onboard ban\` bans the user. The reason is required and will be DMed to them.
 Whenever a user is admitted, they are also DMed to let them know.`,
