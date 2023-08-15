@@ -1,23 +1,28 @@
 {
     "roles": {
         "staff": [],
-        "onboarder": []
+        "everyone": []
+    },
+    "channels": {
+        "bot spam": []
     },
     "allowed": [
         {
             "commands": "*",
             "roles": [
                 "staff"
-            ]
+            ],
+            "channels": "*"
         },
         {
             "commands": [
-                "airlockcount",
-                "vettinglimit"
+                "help",
+                "hello"
             ],
             "roles": [
-                "onboarder"
-            ]
+                "everyone"
+            ],
+            "channels": ["bot spam"]
         }
     ]
 }

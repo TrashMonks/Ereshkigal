@@ -1,5 +1,3 @@
-const {getAllowedSet} = require('../permissions')
-
 module.exports = {
     name: 'help',
     synopsis: 'Query information about enabled plugins.',
@@ -12,7 +10,10 @@ module.exports = {
 When a plugin's name is passed (e.g., just like was done to trigger this message), that plugin's name, synopsis, and usage (if applicable) as well as a detailed description are given. The usage is a list of one or more ways to trigger the command. As with this help command, the command string must be sent as a message in a place where the bot can see.`,
     async run({pluginName}, message, bot) {
         if (pluginName === undefined) {
-            const allowedSet = getAllowedSet(message.member.roles.cache.keys())
+            const allowedSet = new Set(bot.permissions.getAllowed({
+                roles: Array.from(message.member.roles.cache.keys()),
+                channel: message.channel.id,
+            }))
             const commandSynopses = []
             const otherSynopses = []
 

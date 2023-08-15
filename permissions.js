@@ -1,84 +1,84 @@
-const {loadConfig, saveConfig} = require('./config')
-const defaultPermissionsFileName = './permissions.default.json'
-const permissionsFileName = './permissions.json'
-
-// Add all elements of setB to setA.
-// setA must be a Set. setB need only be iterable.
-const mergeSetsDestructively = (setA, setB) => {
-    for (const element of setB) {
-        setA.add(element)
+class PermissionSet {
+    static ruleMatches(rule, {role, command, channel}) {
+        return role === rule.role &&
+               (command === '*' || rule.command === '*' || command === rule.command) &&
+               (channel === '*' || rule.channel === '*' || channel === rule.channel)
     }
-    return setA
-}
+    /*
+        Create a new permission set based on a configuration.
 
-const permissions = Object.freeze(loadConfig({
-    fileName:           permissionsFileName,
-    defaultFileName:    defaultPermissionsFileName,
-}))
+        The argument must be an object with the following properties:
+        - roles: an object whose property values are arrays
+        - channels: an object whose property values are arrays
+        - allowed: an array of objects with the following properties:
+            - roles: an array
+            - commands: '*' or an array
+            - channels: '*' or an array
 
-// The permissions file specifies command permission in terms of role groups.
-// Since permissions are always checked in terms of individual roles instead of
-// groups, it's more convenient to look them up by individual role, so a cache
-// is populated for that purpose.
+        The outer roles and channels values are lookup tables used to resolve
+        aliases used in rules to actual roles and channels. The rules are the
+        elements of the allowed array. Each rule specifies what roles may
+        execute what command in what channel. If '*' is given (when valid), it
+        means any.
 
-// The cache is a map whose keys are roles and whose values are either:
-// - '*', meaning all commands; or
-// - a set of commands.
+        Besides the constructor, everything in this class is agnostic of this
+        format. In particular, nothing else uses the role and channel aliases.
+        The format is itself agnostic of what it's used for, but is designed to
+        work with Discord's role system.
+    */
+    constructor (data) {
+        for (const rule of data.allowed) {
+            // TODO: Error on missing names.
+            // TODO: Error on * for roles.
+            const roles =
+                rule.roles.flatMap((name) => data.roles[name])
+            const commands = rule.commands === '*' ? ['*'] :
+                rule.commands
+            const channels = rule.channels === '*' ? ['*'] :
+                rule.channels.flatMap((name) => data.channels[name])
 
-const cache = new Map
-
-// Populate the cache.
-for (const rule of permissions.allowed) {
-    for (const roleGroup of rule.roles) {
-        for (const role of permissions.roles[roleGroup]) {
-            const cachedCommands = cache.get(role)
-            // * is already cached, so there is nothing to do.
-            if (cachedCommands === '*') {
-                continue
-            // * supercedes anything that was already cached.
-            } else if (rule.commands === '*') {
-                cache.set(role, '*')
-            // There are no commands cached yet for this role; make a new set.
-            } else if (cachedCommands === undefined) {
-                cache.set(role, new Set(rule.commands))
-            // There are commands already cached; add to the existing set.
-            } else {
-                mergeSetsDestructively(cachedCommands, rule.commands)
+            for (const role of roles) {
+                for (const command of commands) {
+                    for (const channel of channels) {
+                        this.addRule({role, command, channel})
+                    }
+                }
             }
         }
     }
-}
 
-const roleIsAllowed = (role, command) => {
-    const commands = cache.get(role)
-    return commands === '*' || (commands?.has(command) ?? false)
-}
-
-const isAllowed = (roles, command) => {
-    for (const role of roles) {
-        if (roleIsAllowed(role, command)) {
-            return true
-        }
+    allows({roles, command, channel}) {
+        return roles.some((role) =>
+            this.findRule({role, command, channel}) !== undefined)
     }
 
-    return false
-}
+    getAllowed({roles, channel}) {
+        const result = roles.flatMap((role) =>
+            this.findRules({role, command: '*', channel}))
+        .map((rule) => rule.command)
 
-const getRoleAllowedSet = (role) => cache.get(role)
-
-const getAllowedSet = (roles) => {
-    const allowedSet = new Set
-    for (const roleAllowedSet of [...roles].map(getRoleAllowedSet)) {
-        if (roleAllowedSet === '*') {
+        if (result.some((command) => command === '*')) {
             return '*'
-        } else if (roleAllowedSet !== undefined) {
-            mergeSetsDestructively(allowedSet, roleAllowedSet)
+        } else {
+            return result
         }
     }
-    return allowedSet
+
+    findRule({role, command, channel}) {
+        return Array.from(this.#rules).find((rule) =>
+            PermissionSet.ruleMatches(rule, {role, command, channel}))
+    }
+
+    findRules({role, command, channel}) {
+        return Array.from(this.#rules).filter((rule) =>
+            PermissionSet.ruleMatches(rule, {role, command, channel}))
+    }
+
+    addRule({role, command, channel}) {
+        this.#rules.add(Object.freeze({role, command, channel}))
+    }
+
+    #rules = new Set;
 }
 
-module.exports = {
-    isAllowed,
-    getAllowedSet,
-}
+module.exports = {PermissionSet}

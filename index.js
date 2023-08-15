@@ -5,7 +5,7 @@ const {Client} = require('discord.js')
 const {parseUsage, parseArguments, UsageSyntaxError} = require('./arguments')
 const {loadConfig, saveConfig} = require('./config')
 const {info, fatal, checkFatal} = require('./log')
-const {isAllowed} = require('./permissions')
+const {PermissionSet} = require('./permissions')
 const defaultConfigFileName = './config.default.json'
 const configFileName = './config.json'
 const pluginDirectoryName = './plugins'
@@ -127,9 +127,10 @@ const onMessageCreate = async (message) => {
     const plugin = bot.plugins.get(name)
     if (plugin === undefined) { return }
 
-    const roles = new Set(message.member.roles.cache.keys())
-
-    if (!isAllowed(roles, name)) {
+    if (!bot.permissions.allows({
+        roles: Array.from(message.member.roles.cache.keys()),
+        command: name,
+        channel: message.channel.id})) {
         info(
 'The preceding command was ignored due to insufficient permissions.'
         )
@@ -182,6 +183,8 @@ void (async () => {
 'Please provide a guild ID by editing the "guildId" field in config.json. This is required because the bot is designed to work with only one guild.'
         )
     }
+
+    bot.permissions = new PermissionSet(require('./permissions.json'))
 
     // Load all plugins.
     // Loading a plugin consists of:
