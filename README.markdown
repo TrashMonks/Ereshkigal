@@ -16,7 +16,7 @@ These instructions assume some knowledge of Discord, command line, git, and JSON
 
 1. Clone this repository and set it as the working directory. (All commands are assumed to be run in the root of this repository.)
 2. Run `npm ci` to install dependencies. (*Do not* run `npm install`; this can fetch different versions of the dependencies than the ones that were developed against.)
-5. Make a copy of `permissions.default.json` named `permissions.json`. Change the array associated with `"staff"` so that it contains one or more strings containing the Discord role IDs of your server's staff roles. **Only add roles that you trust with command of the bot.** (You can configure this in more detail later; see [Permissions](#Permissions).)
+5. Make a copy of `permissions.example.json` named `permissions.json`. Change the array associated with `"staff"` so that it contains one or more strings containing the Discord role IDs of your server's staff roles. **Only add roles that you trust with command of the bot.** (You can configure this in more detail later; see [Permissions](#Permissions).)
 6. Run `node .`. If any instructions appear, follow them and then run `node .` again. Do this as many times as necessary. If `Done.` appears in the output, the bot has successfully booted and connected to Discord.
     - If you would rather disable a plugin than follow its instructions, delete the file of the appropriate name from `plugins/` or else move it elsewhere. You can re-enable it later by recreating the file, e.g., with `git reset`.
 
@@ -37,16 +37,17 @@ The bot is unpermissive by default; a given user may not run any commands unless
 
 In this section, the `…` character in a JSON snippet stands for something that hasn't been expounded upon or that must be provided by the bot maintainer.
 
-The basic layout of the file is an object with names `"roles"` and `"allowed"`:
+The basic layout of the file is an object with names `"roles"`, `"channels"`, and `"allowed"`:
 
     {
         "roles": …,
+        "channels": …,
         "allowed": …
     }
 
 The meanings of these are expounded in the following sections.
 
-### Role Groups
+### Role and Channel Groups
 
 The value of `"roles"` is itself an object whose names are the names of *role groups* to be defined. For example, if there are two role groups, called `staff` and `onboarder`, it might look like this:
 
@@ -66,18 +67,21 @@ Where the `…`s must be replaced by Discord role IDs.
 
 Discord roles that share the same role group are treated identically to each other by the bot for purposes of running commands.
 
+The value of `"channels"` functions much the same way but is for channels instead of roles.
+
 ### Allow Rules
 
-The real significance of role groups is which commands each of them is allowed to run. This is determined by *allow rules*. The value of `"allowed"` is an array of rules in the order in which they will be tried. (The order doesn't change the outcome.)
+The real significance of role groups is which commands each of them is allowed to run. This is determined by *allow rules*. The value of `"allowed"` is an array of rules.
 
-Continuing with the example role groups from the previous section, say that you wish to allow staff to use *all* commands and onboarders to use just `airlockcount` and `vettinglimit` commands. Then the allow rules might look like this:
+Continuing with the example role groups from the previous section, say that you wish to allow staff to use *all* commands and onboarders to use just `airlockcount` and `vettinglimit` commands (in all channels). Then the allow rules might look like this:
 
     [
         {
             "commands": "*",
             "roles": [
                 "staff"
-            ]
+            ],
+            "channels": "*"
         },
         {
             "commands": [
@@ -86,13 +90,14 @@ Continuing with the example role groups from the previous section, say that you 
             ],
             "roles": [
                 "onboarder"
-            ]
+            ],
+            "channels": "*"
         }
     ]
 
-As seen in this snippet, each individual rule is given as an object with names `"commands"` and `"roles"`. The value of `"commands"` is either an array of strings, representing command names, or the string `"*"`, representing all commands. The value of `"roles"` is an array of strings, representing role groups (as defined in the previous section). Each rule can cover as many commands as needed, and as many role groups as needed.
+As seen in this snippet, each individual rule is given as an object with names `"commands"`, `"roles"`, and `"channels"`. The value of `"commands"` is either an array of strings, representing command names, or the string `"*"`, representing all commands. The value of `"roles"` is an array of strings, representing role groups (as defined in the previous section). The value of `"channels"` is just like that of `"roles"` but is for channel groups instead, with the exception that `"*"` is a valid value as well. Each rule can cover as many commands as needed, and as many role groups as needed.
 
-In accordance with the design principles of the bot, `"*"` is *not* a valid value for `"roles"`. If some command should be executable by anyone, then a role group needs to be defined to encapsulate that.
+In accordance with the design principles of the bot, `"*"` is *not* a valid value for `"roles"`. If some command should be executable by anyone, then an appropriate role group needs to be defined.
 
 ### Summary
 
@@ -103,12 +108,14 @@ Putting the information from the preceding sections together, here is the final 
             "staff": ["…", "…"],
             "onboarder": ["…"]
         },
+        "channels": {},
         "allowed": [
             {
                 "commands": "*",
                 "roles": [
                     "staff"
-                ]
+                ],
+                "channels": "*"
             },
             {
                 "commands": [
@@ -117,7 +124,8 @@ Putting the information from the preceding sections together, here is the final 
                 ],
                 "roles": [
                     "onboarder"
-                ]
+                ],
+                "channels": "*"
             }
         ]
     }
