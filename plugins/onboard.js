@@ -4,9 +4,7 @@ const {fatal} = require('../log')
 
 let onboardingCategoryIds
 let applicationChannelId
-let approvalChannelId
-let approvedRoleId
-let deniedRoleId
+let admissionChannelId
 let memberRoleId
 let patronRoleIds
 
@@ -19,9 +17,7 @@ const initialize = ({config}) => {
     ({
         onboardingCategoryIds,
         applicationChannelId,
-        approvalChannelId,
-        approvedRoleId,
-        deniedRoleId,
+        admissionChannelId,
         memberRoleId,
         patronRoleIds,
     } = config?.onboarding ?? {})
@@ -38,21 +34,9 @@ const initialize = ({config}) => {
         )
     }
 
-    if (approvalChannelId === undefined) {
+    if (admissionChannelId === undefined) {
         fatal(
-`Please specify an approval logging channel by editing the "approvalChannelId" field under "onboarding".`
-        )
-    }
-
-    if (approvedRoleId === undefined) {
-        fatal(
-`Please specify an approved role by editing the "approvedRoleId" field under "onboarding".`
-        )
-    }
-
-    if (deniedRoleId === undefined) {
-        fatal(
-`Please specify a denied role by editing the "deniedRoleId" field under "onboarding".`
+`Please specify an admission logging channel by editing the "admissionChannelId" field under "onboarding".`
         )
     }
 
@@ -70,32 +54,6 @@ const initialize = ({config}) => {
 }
 
 const ready = async ({client, guild}) => {
-    client.on('guildMemberUpdate', async (oldMember, member) => {
-        // Ignore the addition of these roles to anyone already a member.
-        if (member.roles.cache.has(memberRoleId)) { return }
-
-        if (
-            !oldMember.roles.cache.has(approvedRoleId) &&
-            member.roles.cache.has(approvedRoleId)
-        ) {
-            // The user has been approved for membership.
-            const approvalChannel =
-            await client.channels.resolve(approvalChannelId)
-            await approvalChannel.send(
-`✅${member} has been approved for entry.`
-            )
-        } else if (
-            !oldMember.roles.cache.has(deniedRoleId) &&
-            member.roles.cache.has(deniedRoleId)
-        ) {
-            // The user has been denied for membership.
-            if (member.kickable) {
-                await setTimeout(1000)
-                await member.kick('Entry application denied.')
-            }
-        }
-    })
-
     // Cache all applications on startup and as they come in.
     client.on('messageCreate', (message) => {
         if (message.channel.id === applicationChannel.id) {
@@ -193,7 +151,7 @@ const computeUserIdFromMessage = (message) => {
 
 const run = async ({
     view, admit, next, grab, amount,
-    app, approve, kick, ban, who, reason
+    app, kick, ban, who, reason
 }, message) => {
     const guild = message.guild
 
@@ -208,20 +166,12 @@ const run = async ({
 
     // We're retrieving the users who will be let in next.
     if (next) {
-        const approved = Array.from(
-            (await guild.roles.fetch(approvedRoleId)).members
-            .filter(isNotMember)
-            .filter(isNotInTicket(ticketChannels))
-            .values()
-        ).sort(byJoinDate)
-        const remainder = Array.from(
+        const queue = Array.from(
             guild.members.cache
             .filter(isNotMember)
             .filter(isNotInTicket(ticketChannels))
-            .filter((member) => !approved.includes(member))
             .values()
         ).sort(byJoinDate)
-        const queue = approved.concat(remainder)
         const queuedPatrons = queue.filter(isPatron)
         const queuedNonPatrons = queue.filter(isNotPatron)
 
@@ -266,7 +216,6 @@ const run = async ({
             .filter(isNotMember)
             .filter(isNotInTicket(ticketChannels))
             .filter(hasApplication)
-            .filter((member) => !member.roles.cache.has(approvedRoleId))
             .values()
         )
         if (users.length <= amount) {
@@ -289,28 +238,17 @@ const run = async ({
         const applicationUrl =
             userApplications.get(who.id)?.url ?? 'No application found.'
         message.reply(applicationUrl)
-    } else if ((admit || approve || kick || ban) && who.roles.cache.has(memberRoleId)) {
+    // The remaining commands cannot be performed on full members.
+    } else if (who.roles.cache.has(memberRoleId)) {
         await message.reply('I am unable to perform that operation on someone who is a full member of the server.')
     // We're permitting a user to enter.
     } else if (admit) {
         await admitMember(who)
         await message.reply(`🌈${who} has been granted access to the server.`)
-    // We're moving a user up in the queue.
-    } else if (approve) {
-        if (who.roles.cache.has(approvedRoleId)) {
-            await message.reply('That user is already approved.')
-            return
-        }
-        await who.roles.add(approvedRoleId)
-        try {
-            await who.send("You've been moved up in the queue to join the Caves of Qud server. You will be DMed again when you're let in.")
-        } catch (_) {
-            // DMing failed.
-        }
-        await message.reply(`✅${who} has been approved for entry.`)
+    // The remaining commands require a reason to be given.
     } else if (reason !== undefined && reason.length === 0) {
         await message.reply('You must provide a non-empty reason.')
-    // We're temporarily removing a user so they will go to the back of the queue.
+    // We're temporarily removing a user so they will go to the back of the queue if they rejoin.
     } else if (kick) {
         if (!who.kickable) {
             await message.reply('I am unable to kick that user.')
@@ -375,12 +313,11 @@ const fetchAllMessages = async (channel) => {
 }
 
 const admitMember = async (member) => {
-    await member.roles.remove(approvedRoleId)
     await member.roles.add(memberRoleId)
     const content = `🌈${member} has been granted access to the server.`
-    const approvalChannel =
-        await member.guild.channels.resolve(approvalChannelId)
-    await approvalChannel.send(content)
+    const admissionChannel =
+        await member.guild.channels.resolve(admissionChannelId)
+    await admissionChannel.send(content)
 
     try {
         await member.send('You have been admitted to the Caves of Qud server.')
@@ -455,22 +392,18 @@ module.exports = {
         '"grab" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
-        '"approve" who:member',
         '"kick" who:member ...reason',
         '"ban" who:member ...reason',
     ],
     synopsis: 'Handle onboarding of new members.',
     description:
 `This plugin is responsible for several different related functions:
-- When a user is approved for server entry, it sends notice of this to a channel.
-- When a user is denied, it kicks them. Because priority is based on server join date, this effectively puts them at the end of the queue should they rejoin.
 - \`onboard view next\` shows the next \`amount\` users who will be let in.
 - \`onboard admit next\` lets in the next \`amount\` users.
 - \`onboard grab\` shows the applications of \`amount\` random users.
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
 The following user-related commands only work on users who are not full members:
 - \`onboard admit\` grants full entry to the server to the specified user.
-- \`onboard approve\` adds a user to the queue of users prioritized by the \`next\` commands.
 - \`onboard kick\` kicks the user. The reason is required and will be DMed to them.
 - \`onboard ban\` bans the user. The reason is required and will be DMed to them.
 Whenever a user is admitted, they are also DMed to let them know.`,
