@@ -2,6 +2,8 @@ const {setTimeout} = require('timers/promises')
 const {Collection} = require('discord.js')
 const {fatal} = require('../log')
 
+const BATCH_ADMISSION_CAP = 50
+
 let onboardingCategoryIds
 let applicationChannelId
 let admissionChannelId
@@ -150,7 +152,7 @@ const computeUserIdFromMessage = (message) => {
 }
 
 const run = async ({
-    view, admit, next, grab, amount,
+    view, admit, next, them, grab, amount,
     app, kick, ban, who, reason
 }, message) => {
     const guild = message.guild
@@ -192,23 +194,27 @@ const run = async ({
 
         // Admit the retrieved users.
         if (admit) {
-            const AMOUNT_CAP = 50
-            if (amount > AMOUNT_CAP) {
+            if (amount > BATCH_ADMISSION_CAP) {
                 message.reply(
-                    `To avoid accidents, there is currently a cap of ${AMOUNT_CAP} on how many users may be batch-admitted at once. Please request at most that many.`
+                    `To avoid accidents, there is a cap of ${BATCH_ADMISSION_CAP} on how many users may be batch-admitted at once. Please request at most that many.`
                 )
                 return
-            }
 
-            await message.reply('Very well. Proceeding with admissions.')
-            for (const member of selectedMembers) {
-                await admitMember(member)
             }
-            await message.reply('I have admitted the requested batch.')
+            await batchAdmit(message, selectedMembers)
         // View the retrieved users.
         } else if (view) {
             await outputMembers(message, selectedMembers)
         }
+    // We're admitting the users pointed at by another message.
+    } else if (them) {
+        if (message.reference == null) {
+            message.reply('Please reply to the message listing the users to admit.')
+            return
+        }
+        const repliedMessage = await message.channel.messages.fetch(message.reference.messageId)
+        selectedMembers = Array.from(repliedMessage.content.matchAll(/<@!?(?<id>\d+)>/g)).map((match) => guild.members.resolve(match.groups.id))
+        await batchAdmit(message, selectedMembers)
     // We're fetching random applications.
     } else if (grab) {
         const users = Array.from(
@@ -313,6 +319,7 @@ const fetchAllMessages = async (channel) => {
 }
 
 const admitMember = async (member) => {
+    if (member.roles.cache.has(memberRoleId)) { return }
     await member.roles.add(memberRoleId)
     const content = `🌈${member} has been granted access to the server.`
     const admissionChannel =
@@ -326,6 +333,21 @@ const admitMember = async (member) => {
     } catch (_) {
         console.log(`I was unable to DM ${member}.`)
     }
+}
+
+const batchAdmit = async (message, members) => {
+    if (members.length > BATCH_ADMISSION_CAP) {
+        message.reply(
+            `To avoid accidents, there is a cap of ${BATCH_ADMISSION_CAP} on how many users may be batch-admitted at once. Please admit in smaller batches.`
+        )
+        return
+    }
+
+    await message.reply('Very well. Proceeding with admissions.')
+    for (const member of members) {
+        await admitMember(member)
+    }
+    await message.reply('I have admitted the requested batch.')
 }
 
 const outputMembers = async (message, members) => {
@@ -391,6 +413,7 @@ module.exports = {
     usage: [
         '"view" "next" amount:wholeNumber',
         '"admit" "next" amount:wholeNumber',
+        '"admit" "them"',
         '"grab" amount:wholeNumber',
         '"app" who:user',
         '"admit" who:member',
@@ -402,6 +425,7 @@ module.exports = {
 `This plugin is responsible for several different related functions:
 - \`onboard view next\` shows the next \`amount\` users who will be let in.
 - \`onboard admit next\` lets in the next \`amount\` users.
+- \`onboard admit them\` lets in all users mentioned in the message you're replying to.
 - \`onboard grab\` shows the applications of \`amount\` random users.
 - \`onboard app\` retrieves the URL for the given user's application, if there is one.
 The following user-related commands only work on users who are not full members:
