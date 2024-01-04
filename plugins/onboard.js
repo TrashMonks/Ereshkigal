@@ -6,6 +6,7 @@ let onboardingCategoryIds
 let admissionChannelId
 let memberRoleId
 let patronRoleIds
+let freezerRoleId
 
 const initialize = ({config}) => {
     ({
@@ -13,6 +14,7 @@ const initialize = ({config}) => {
         admissionChannelId,
         memberRoleId,
         patronRoleIds,
+        freezerRoleId,
     } = config?.onboarding ?? {})
 
     if (onboardingCategoryIds === undefined) {
@@ -36,6 +38,12 @@ const initialize = ({config}) => {
     if (patronRoleIds === undefined) {
         fatal(
 `Please list out patron roles by editing the "patronRoleIds" field under "onboarding".`
+        )
+    }
+
+    if (freezerRoleId === undefined) {
+        fatal(
+`Please specify a freezer role by editing the "freezerRoleId" field under "onboarding".`
         )
     }
 }
@@ -62,6 +70,7 @@ const run = async ({
             .filter(isNotBot)
             .filter(isNotMember)
             .filter(isNotInTicket(ticketChannels))
+            .filter(isNotFrozen)
             .values()
         ).sort(byJoinDate)
         const queuedPatrons = queue.filter(isPatron)
@@ -230,6 +239,10 @@ const isNotMember = (member) =>
 const isNotInTicket = (ticketChannels) => (member) =>
     !ticketChannels.some((channel) =>
         channel.permissionsFor(member).has('VIEW_CHANNEL'))
+
+// Is the given member not being held back in the airlock?
+const isNotFrozen = (member) =>
+    !member.roles.cache.has(freezerRoleId)
 
 // Order the two given members by ascending join date. This is used with
 // sorting functions expecting negative, zero, or positive based on an order.
