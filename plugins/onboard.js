@@ -59,6 +59,7 @@ const run = async ({
     if (next) {
         const queue = Array.from(
             guild.members.cache
+            .filter(isNotBot)
             .filter(isNotMember)
             .filter(isNotInTicket(ticketChannels))
             .values()
@@ -211,6 +212,10 @@ const outputMembers = async (message, members) => {
         message.reply('No results.')
     }
 }
+
+// Is the given member a non-bot account?
+const isNotBot = (member) =>
+    !member.user?.bot ?? true
 
 // Does the given member lack the full member role?
 const isNotMember = (member) =>
