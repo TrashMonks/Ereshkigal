@@ -174,7 +174,7 @@ const admitMember = async (member, message) => {
 
     try {
         await member.send(
-"You have been admitted to the Caves of Qud server. Please make sure you've reviewed https://discord.com/channels/214532333900922882/851573170325815366. See https://discord.com/channels/214532333900922882/735270006312402985 for additional useful information."
+"You have been admitted to the Caves of Qud server. Please make sure you've reviewed https://discord.com/channels/214532333900922882/459836691822411786. See https://discord.com/channels/214532333900922882/735270006312402985 for additional useful information."
         )
     } catch (_) {
         console.log(`I was unable to DM ${member}.`)
