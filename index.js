@@ -58,12 +58,24 @@ const prettyUsage = (prefix, name, usage) => {
     return result
 }
 
-const checkGuildAgainstConfiguration = (guild) => {
+const checkGuildAgainstConfiguration = async (guild) => {
     if (guild.id !== bot.config.guildId) {
         console.warn(
 `Leaving guild ${guild.name} (${guild.id}) because it does not match the configured guild ID (${bot.config.guildId}).`
         )
-        guild.leave()
+        await guild.leave()
+    }
+}
+
+let lastMembersUpdate
+
+// Cache all guild members, but only at most once every 30 minutes.
+const updateMembersCache = async (guild) => {
+    const now = Date.now()
+    if (lastMembersUpdate == null || now - lastMembersUpdate >= 1000 * 60 * 30) {
+        console.log('updated!')
+        await guild.members.fetch()
+        lastMembersUpdate = now
     }
 }
 
@@ -92,11 +104,10 @@ const onReady = async (client) => {
 
     // Leave all the "wrong" guilds.
     for (const [_, guild] of client.guilds.cache) {
-        checkGuildAgainstConfiguration(guild)
+        await checkGuildAgainstConfiguration(guild)
     }
 
-    // Cache all members so that the bot will see changes in them.
-    await guild.members.fetch()
+    updateMembersCache(guild)
 
     for (const [_, plugin] of bot.plugins) {
         if (plugin.ready !== undefined) {
@@ -121,6 +132,7 @@ const onMessageCreate = async (message) => {
         return
     }
 
+    updateMembersCache(message.guild)
     logDiscordMessage(message)
     const command = message.content.replace(bot.config.commandPrefix, '')
     const [name, argsString = ''] = command.split(/\s+(.*)/s, 2)
