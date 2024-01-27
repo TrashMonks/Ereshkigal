@@ -28,6 +28,8 @@ const run = async ({messageToEdit, newContent, messageToCopy}, message) => {
             await messageToEdit.edit(attachedContent)
         }
     }
+
+    await message.reply(`${messageToEdit.url} has been edited.`)
 }
 
 module.exports = {
