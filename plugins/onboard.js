@@ -6,7 +6,7 @@ let onboardingCategoryIds
 let admissionChannelId
 let memberRoleId
 let patronRoleIds
-let freezerRoleId
+let freezerRoleIds
 
 const initialize = ({config}) => {
     ({
@@ -14,7 +14,7 @@ const initialize = ({config}) => {
         admissionChannelId,
         memberRoleId,
         patronRoleIds,
-        freezerRoleId,
+        freezerRoleIds,
     } = config?.onboarding ?? {})
 
     if (onboardingCategoryIds === undefined) {
@@ -41,9 +41,9 @@ const initialize = ({config}) => {
         )
     }
 
-    if (freezerRoleId === undefined) {
+    if (freezerRoleIds === undefined) {
         fatal(
-`Please specify a freezer role by editing the "freezerRoleId" field under "onboarding".`
+`Please list out freezer roles by editing the "freezerRoleIds" field under "onboarding".`
         )
     }
 }
@@ -242,7 +242,7 @@ const isNotInTicket = (ticketChannels) => (member) =>
 
 // Is the given member not being held back in the airlock?
 const isNotFrozen = (member) =>
-    !member.roles.cache.has(freezerRoleId)
+    !freezerRoleIds.some((freezerRoleId) => member.roles.cache.has(freezerRoleId))
 
 // Order the two given members by ascending join date. This is used with
 // sorting functions expecting negative, zero, or positive based on an order.
