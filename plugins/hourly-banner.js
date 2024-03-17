@@ -1,6 +1,8 @@
 const {readFile} = require('fs/promises')
 const {fatal, info} = require('../log')
 
+let logChannelId
+let logChannel
 let entries
 let memberRoleId
 let buffers = new Map
@@ -8,8 +10,14 @@ let totalWeight = 0
 let latestEntry
 
 const initialize = async ({config}) => {
-    void ({banners: entries} = config ?? {})
+    void ({banners: entries, logChannelId} = config ?? {})
     void ({memberRoleId} = config?.onboarding ?? {})
+
+    if (logChannelId === undefined) {
+        fatal(
+'Please specify a logging channel by editing the "logChannelId" field.'
+        )
+    }
 
     if (entries === undefined) {
         fatal(
@@ -29,7 +37,16 @@ const initialize = async ({config}) => {
     }
 }
 
-const ready = ({guild}) => {
+const ready = ({client, guild}) => {
+    logChannel = client.channels.resolve(logChannelId)
+
+    if (logChannel === null) {
+        fatal(
+'Could not resolve the log channel. Make sure it refers to an existing channel.'
+        )
+        return
+    }
+
     const processBanner = async () => {
         // Assume that any previous secret channel should be hidden, even
         // though it might be immediately unhidden.
@@ -47,6 +64,10 @@ const ready = ({guild}) => {
             weightSoFar += entry.weight
             if (weight < weightSoFar) {
                 latestEntry = entry
+
+                if (latestEntry.logMessage != null) {
+                    logChannel.send(latestEntry.logMessage)
+                }
 
                 // Unhide the secret channel if there is one.
                 latestChannelId = latestEntry?.channelId
