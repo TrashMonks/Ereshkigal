@@ -1,5 +1,5 @@
 const {Readable} = require("stream")
-const {MessageAttachment} = require("discord.js")
+const {AttachmentBuilder} = require("discord.js")
 
 module.exports = {
     name: 'raw',
@@ -10,7 +10,7 @@ module.exports = {
 'Given a message ID or URI, provide as an attachment the raw Discord formatting that was used to create the message.',
     async run({messageToFetch}, message) {
         const attachmentStream = Readable.from([messageToFetch.content])
-        const attachment = new MessageAttachment(attachmentStream, `raw-${messageToFetch.id}.txt`)
+        const attachment = new AttachmentBuilder(attachmentStream, {name: `raw-${messageToFetch.id}.txt`})
         await message.reply({files: [attachment]})
     },
 }

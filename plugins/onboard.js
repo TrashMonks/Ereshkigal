@@ -94,7 +94,7 @@ const run = async ({
         onboardingCategoryIds.map((id) => guild.channels.fetch(id))
     )
     const ticketChannels = ticketCategories.flatMap(
-        (category) => Array.from(category.children.values())
+        (category) => Array.from(category.children.cache.values())
     )
 
     // We're retrieving the users who will be let in next.
@@ -306,7 +306,7 @@ const isNotMember = (member) =>
 // the ticket channels.
 const isNotInTicket = (ticketChannels) => (member) =>
     !ticketChannels.some((channel) =>
-        channel.permissionsFor(member).has('VIEW_CHANNEL'))
+        channel.permissionsFor(member).has('ViewChannel'))
 
 // Is the given member being held back in the airlock?
 const isFrozen = (member) =>

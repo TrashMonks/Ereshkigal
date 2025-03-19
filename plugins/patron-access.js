@@ -48,7 +48,6 @@ module.exports = {
     synopsis: 'Manage access to patron channels.',
     description:
 "Access to the patron category requires that users have both the member role and one of the patron roles. Discord doesn't natively support this, so this plugin listens for role updates and gives the access role to users who satisfy these conditions and remove it from those who no longer do.",
-    intents: ['GUILD_MEMBERS'],
     initialize,
     ready,
 }

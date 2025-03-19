@@ -7,7 +7,6 @@ module.exports = {
     synopsis: 'Log when airlock users change their avatars.',
     description:
 'Whenever an airlock user changes their avatar (profile picture), the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who it was and what their old and new avatars are. The new avatar is shown larger than the old.',
-    intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
         ({logChannelId} = bot.config ?? {})

@@ -7,7 +7,6 @@ module.exports = {
     synopsis: 'Log when users join or leave the server.',
     description:
 'Whenever a user joins or leaves the server, the bot posts a message in the logging channel (configured with the `"logChannelId"` config field) saying who joined or left, including a mention.',
-    intents: ['GUILD_MEMBERS'],
 
     initialize(bot) {
         ({logChannelId} = bot.config ?? {})

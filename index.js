@@ -2,7 +2,7 @@
 
 require('toml-require').install()
 const {copyFile, readdir} = require('fs/promises')
-const {Client} = require('discord.js')
+const {Client, GatewayIntentBits} = require('discord.js')
 const {parseUsage, parseArguments, UsageSyntaxError} = require('./arguments')
 const {info, fatal, checkFatal, logDiscordMessage} = require('./log')
 const {PermissionSet} = require('./permissions')
@@ -191,11 +191,9 @@ void (async () => {
     // Load all plugins.
     // Loading a plugin consists of:
     // - requiring it as a module;
-    // - querying the intents it needs;
     // - running its initialize function if it has one.
-    // All of this happens before connection so that any plugin can abort at
-    // any point if its needs aren't met.
-    // GUILDS, GUILD_MEMBERS, and GUILD_MESSAGES intents are always requested.
+    // This happens before connection so that any plugin can abort at any point
+    // if its needs aren't met.
 
     console.group('Loading plugins...')
 
@@ -223,7 +221,6 @@ void (async () => {
         }
     }
 
-    const intentsSet = new Set(['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES'])
     const plugins = bot.plugins = new Map
 
     for (const pluginFileName of pluginFileNames) {
@@ -231,12 +228,6 @@ void (async () => {
         const plugin = require(`${pluginDirectoryName}/${pluginFileName}`)
         plugin.fileName = pluginFileName
         plugins.set(plugin.name, plugin)
-
-        if (plugin.intents !== undefined) {
-            for (const intent of plugin.intents) {
-                intentsSet.add(intent)
-            }
-        }
 
         if (plugin.usage !== undefined) {
             const usage = Array.isArray(plugin.usage) ? plugin.usage
@@ -265,10 +256,13 @@ void (async () => {
 
     // Connect to Discord.
     info('Connecting...')
-    const intents = Array.from(intentsSet)
-
     const client = bot.client = new Client({
-        intents,
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent,
+        ],
 
         /* Default Message Options */
 

@@ -53,7 +53,7 @@ const ready = ({client, guild}) => {
         let latestChannelId = latestEntry?.channelId
         if (latestChannelId != null) {
             await guild.channels.resolve(latestChannelId).permissionOverwrites.edit(memberRoleId, {
-                'VIEW_CHANNEL': false,
+                'ViewChannel': false,
             })
         }
 
@@ -73,7 +73,7 @@ const ready = ({client, guild}) => {
                 latestChannelId = latestEntry?.channelId
                 if (latestChannelId != null) {
                     await guild.channels.resolve(latestChannelId).permissionOverwrites.edit(memberRoleId, {
-                        'VIEW_CHANNEL': true,
+                        'ViewChannel': true,
                     })
                 }
 
