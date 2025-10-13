@@ -2,7 +2,7 @@
 
 require('toml-require').install()
 const {copyFile, readdir} = require('fs/promises')
-const {Client, GatewayIntentBits} = require('discord.js')
+const {Client, GatewayIntentBits, Partials} = require('discord.js')
 const {parseUsage, parseArguments, UsageSyntaxError} = require('./arguments')
 const {info, fatal, checkFatal, logDiscordMessage} = require('./log')
 const {PermissionSet} = require('./permissions')
@@ -107,6 +107,7 @@ const onMessageCreate = async (message) => {
     // - are from any bot, since this would be susceptible to exploits;
     // - don't begin with the command prefix.
     if (
+        message.guild === null ||
         message.author.bot ||
         message.content === null ||
         !message.content.startsWith(bot.config.commandPrefix)
@@ -258,10 +259,15 @@ void (async () => {
     info('Connecting...')
     const client = bot.client = new Client({
         intents: [
+            GatewayIntentBits.DirectMessages,
             GatewayIntentBits.Guilds,
             GatewayIntentBits.GuildMembers,
             GatewayIntentBits.GuildMessages,
             GatewayIntentBits.MessageContent,
+        ],
+
+        partials: [
+            Partials.Channel,
         ],
 
         /* Default Message Options */
