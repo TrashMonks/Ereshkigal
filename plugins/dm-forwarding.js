@@ -25,8 +25,13 @@ const ready = async ({client, guild}) => {
 
     client.on('messageCreate', async (message) => {
         if (message.guild === null) {
-            dmChannel.send(`DM from ${message.author}:`)
-            message.forward(dmChannel)
+            const fromTo = message.author.id === client.user.id ? 'to' : 'from'
+            const text = `DM ${fromTo} ${message.channel.recipient}:`
+            console.log(`${text} ${message}`)
+            if (message.author.id !== client.user.id) {
+                dmChannel.send(text)
+                message.forward(dmChannel)
+            }
         }
     })
 }
