@@ -147,6 +147,10 @@ const run = async ({
         }
         const repliedMessage = await message.channel.messages.fetch(message.reference.messageId)
         selectedMembers = Array.from(repliedMessage.content.matchAll(/<@!?(?<id>\d+)>/g)).map((match) => guild.members.resolve(match.groups.id)).filter((member) => member != null)
+        if (selectedMembers.length === 0) {
+            message.reply('I see no user mentions in that message.')
+            return
+        }
         await batchAdmit(message, selectedMembers)
     // The remaining commands cannot be performed on full members.
     } else if (who.roles.cache.has(memberRoleId)) {
